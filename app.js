@@ -1,3 +1,4 @@
+```javascript
 const USERNAME = "inforedflagalerts-byte";
 const REPO = "band-song-book";
 const BRANCH = "main";
@@ -98,18 +99,20 @@ async function loadFolder(folder) {
 
     try {
 
-        const response = await fetch(
-            `${API}/${folder}?ref=${BRANCH}`,
-            {
-                cache: "no-store"
-            }
-        );
+        const response =
+            await fetch(
+                `${API}/${folder}?ref=${BRANCH}`,
+                {
+                    cache: "no-store"
+                }
+            );
 
         if (!response.ok) {
             throw new Error("GitHub request failed");
         }
 
-        const files = await response.json();
+        const files =
+            await response.json();
 
         return files.filter(file => {
 
@@ -236,21 +239,11 @@ async function cacheImages(files) {
 
             try {
 
-                /*
-                 * Check whether image
-                 * is already cached.
-                 */
-
                 const existing =
                     await cache.match(
                         file.download_url
                     );
 
-
-                /*
-                 * Already downloaded.
-                 * Do NOT download again.
-                 */
 
                 if (existing) {
 
@@ -263,11 +256,6 @@ async function cacheImages(files) {
 
                 }
 
-
-                /*
-                 * New image.
-                 * Download and cache it.
-                 */
 
                 console.log(
                     "Downloading new image:",
@@ -360,11 +348,6 @@ async function loadData() {
         `<div class="empty">🎤 Loading...</div>`;
 
 
-    /*
-     * First load saved songs.
-     * This allows offline use.
-     */
-
     loadOfflineData();
 
 
@@ -372,22 +355,12 @@ async function loadData() {
     renderLyrics(lyrics);
 
 
-    /*
-     * If data is OFF,
-     * stop here.
-     */
-
     if (!navigator.onLine) {
 
         return;
 
     }
 
-
-    /*
-     * Internet available.
-     * Check GitHub for updates.
-     */
 
     const newChords =
         await loadFolder("chords");
@@ -411,10 +384,6 @@ async function loadData() {
         );
 
 
-        /*
-         * Only new images are downloaded.
-         */
-
         cacheImages(chords);
 
     }
@@ -435,18 +404,10 @@ async function loadData() {
         );
 
 
-        /*
-         * Only new images are downloaded.
-         */
-
         cacheImages(lyrics);
 
     }
 
-
-    /*
-     * Show updated lists.
-     */
 
     renderChords(chords);
     renderLyrics(lyrics);
@@ -503,11 +464,6 @@ function createSongItem(file, type) {
 
     `;
 
-
-    /*
-     * Open full-screen image
-     * when song is tapped.
-     */
 
     item.addEventListener(
         "click",
@@ -644,10 +600,6 @@ async function openViewer(
         title;
 
 
-    /*
-     * Show viewer immediately.
-     */
-
     viewer.classList.remove(
         "hidden"
     );
@@ -657,29 +609,268 @@ async function openViewer(
         "hidden";
 
 
-    /*
-     * First try cached image.
-     */
+    /* Reset zoom */
+
+    zoomScale = 1;
+    translateX = 0;
+    translateY = 0;
+
+    updateImageTransform();
+
 
     const cachedURL =
         await getImageURL(image);
 
 
-    /*
-     * If cached,
-     * use cached image.
-     */
-
     viewerImage.src =
         cachedURL;
 
+}
 
-    /*
-     * If not cached and internet
-     * is available, original URL works.
-     */
+
+/* =========================================
+   PINCH ZOOM SYSTEM
+========================================= */
+
+let zoomScale = 1;
+
+let translateX = 0;
+let translateY = 0;
+
+let startDistance = 0;
+let startScale = 1;
+
+let startX = 0;
+let startY = 0;
+
+let startTranslateX = 0;
+let startTranslateY = 0;
+
+
+/* =========================================
+   UPDATE IMAGE POSITION
+========================================= */
+
+function updateImageTransform() {
+
+    viewerImage.style.transform =
+        `translate3d(${translateX}px, ${translateY}px, 0) scale(${zoomScale})`;
 
 }
+
+
+/* =========================================
+   DISTANCE BETWEEN TWO FINGERS
+========================================= */
+
+function getTouchDistance(touch1, touch2) {
+
+    const dx =
+        touch2.clientX - touch1.clientX;
+
+    const dy =
+        touch2.clientY - touch1.clientY;
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+
+}
+
+
+/* =========================================
+   TOUCH START
+========================================= */
+
+viewerImage.addEventListener(
+    "touchstart",
+    event => {
+
+        /*
+         * Two fingers = pinch zoom
+         */
+
+        if (event.touches.length === 2) {
+
+            startDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+            startScale =
+                zoomScale;
+
+        }
+
+
+        /*
+         * One finger = move image
+         * when zoomed
+         */
+
+        else if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            startX =
+                event.touches[0].clientX;
+
+            startY =
+                event.touches[0].clientY;
+
+            startTranslateX =
+                translateX;
+
+            startTranslateY =
+                translateY;
+
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =========================================
+   TOUCH MOVE
+========================================= */
+
+viewerImage.addEventListener(
+    "touchmove",
+    event => {
+
+        /*
+         * PINCH ZOOM
+         */
+
+        if (event.touches.length === 2) {
+
+            event.preventDefault();
+
+
+            const currentDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+
+            if (startDistance > 0) {
+
+                const ratio =
+                    currentDistance /
+                    startDistance;
+
+
+                zoomScale =
+                    startScale * ratio;
+
+
+                /*
+                 * Minimum zoom
+                 */
+
+                if (zoomScale < 1) {
+
+                    zoomScale = 1;
+
+                }
+
+
+                /*
+                 * Maximum zoom
+                 */
+
+                if (zoomScale > 5) {
+
+                    zoomScale = 5;
+
+                }
+
+
+                updateImageTransform();
+
+            }
+
+        }
+
+
+        /*
+         * MOVE ZOOMED IMAGE
+         */
+
+        else if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            event.preventDefault();
+
+
+            const currentX =
+                event.touches[0].clientX;
+
+            const currentY =
+                event.touches[0].clientY;
+
+
+            translateX =
+                startTranslateX +
+                (currentX - startX);
+
+            translateY =
+                startTranslateY +
+                (currentY - startY);
+
+
+            updateImageTransform();
+
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =========================================
+   TOUCH END
+========================================= */
+
+viewerImage.addEventListener(
+    "touchend",
+    event => {
+
+        if (event.touches.length < 2) {
+
+            startDistance = 0;
+
+        }
+
+        /*
+         * If zoom returns to normal,
+         * reset position.
+         */
+
+        if (zoomScale <= 1) {
+
+            zoomScale = 1;
+
+            translateX = 0;
+            translateY = 0;
+
+            updateImageTransform();
+
+        }
+
+    }
+);
 
 
 /* =========================================
@@ -698,6 +889,18 @@ function closeImageViewer() {
 
     document.body.style.overflow =
         "";
+
+
+    /*
+     * Reset zoom
+     */
+
+    zoomScale = 1;
+
+    translateX = 0;
+    translateY = 0;
+
+    updateImageTransform();
 
 }
 
@@ -884,3 +1087,4 @@ lyricsBtn.addEventListener(
 ========================================= */
 
 loadData();
+```
