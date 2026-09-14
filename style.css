@@ -493,9 +493,6 @@ body {
     width: auto;
     height: auto;
 
-    touch-action: none;
-will-change: transform;
-
     object-fit: contain;
 
     user-select: none;
