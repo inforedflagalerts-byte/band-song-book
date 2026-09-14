@@ -1,4 +1,4 @@
-const CACHE_NAME = "band-song-book-v1";
+const CACHE_NAME = "band-song-book-v3";
 
 const APP_FILES = [
     "./",
@@ -15,15 +15,15 @@ self.addEventListener(
 
         event.waitUntil(
 
-            caches.open(
-                CACHE_NAME
-            ).then(cache => {
+            caches
+                .open(CACHE_NAME)
+                .then(cache => {
 
-                return cache.addAll(
-                    APP_FILES
-                );
+                    return cache.addAll(
+                        APP_FILES
+                    );
 
-            })
+                })
 
         );
 
@@ -33,22 +33,22 @@ self.addEventListener(
 );
 
 
-
 self.addEventListener(
     "activate",
     event => {
 
         event.waitUntil(
 
-            caches.keys().then(
-                keys => {
+            caches.keys()
+                .then(keys => {
 
                     return Promise.all(
 
                         keys
                             .filter(
                                 key =>
-                                    key !== CACHE_NAME
+                                    key !== CACHE_NAME &&
+                                    key !== "song-book-images-v2"
                             )
                             .map(
                                 key =>
@@ -57,8 +57,7 @@ self.addEventListener(
 
                     );
 
-                }
-            )
+                })
 
         );
 
@@ -66,7 +65,6 @@ self.addEventListener(
 
     }
 );
-
 
 
 self.addEventListener(
@@ -77,9 +75,7 @@ self.addEventListener(
             event.request;
 
 
-        if (
-            request.method !== "GET"
-        ) {
+        if (request.method !== "GET") {
             return;
         }
 
@@ -87,7 +83,6 @@ self.addEventListener(
         event.respondWith(
 
             fetch(request)
-
                 .then(response => {
 
                     if (
@@ -99,16 +94,16 @@ self.addEventListener(
                             response.clone();
 
 
-                        caches.open(
-                            CACHE_NAME
-                        ).then(cache => {
+                        caches
+                            .open(CACHE_NAME)
+                            .then(cache => {
 
-                            cache.put(
-                                request,
-                                copy
-                            );
+                                cache.put(
+                                    request,
+                                    copy
+                                );
 
-                        });
+                            });
 
                     }
 
@@ -116,14 +111,15 @@ self.addEventListener(
                     return response;
 
                 })
+                .catch(
+                    () => {
 
-                .catch(() => {
+                        return caches.match(
+                            request
+                        );
 
-                    return caches.match(
-                        request
-                    );
-
-                })
+                    }
+                )
 
         );
 
