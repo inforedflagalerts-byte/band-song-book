@@ -1,143 +1,603 @@
-const chordFiles = [
-  {
-    name: "77 Kanda Kenda",
-    file: "77kanda kenda new_page-0001.jpg"
-  }
-];
+const GITHUB_USERNAME = "inforedflagalerts-byte";
+const GITHUB_REPO = "band-song-book";
+const GITHUB_BRANCH = "main";
 
-const lyricsFiles = [];
 
-const chordsBtn = document.getElementById("chordsBtn");
-const lyricsBtn = document.getElementById("lyricsBtn");
-const chordsSection = document.getElementById("chordsSection");
-const lyricsSection = document.getElementById("lyricsSection");
-const chordList = document.getElementById("chordList");
-const lyricList = document.getElementById("lyricList");
-const chordSearch = document.getElementById("chordSearch");
-const lyricSearch = document.getElementById("lyricSearch");
+const chordsBtn =
+    document.getElementById("chordsBtn");
 
-function showChords() {
-  chordsSection.classList.remove("hidden");
-  lyricsSection.classList.add("hidden");
+const lyricsBtn =
+    document.getElementById("lyricsBtn");
 
-  chordsBtn.classList.add("active");
-  lyricsBtn.classList.remove("active");
 
-  displayChords(chordFiles);
+const chordsSection =
+    document.getElementById("chordsSection");
+
+const lyricsSection =
+    document.getElementById("lyricsSection");
+
+
+const chordList =
+    document.getElementById("chordList");
+
+const lyricList =
+    document.getElementById("lyricList");
+
+
+const chordSearch =
+    document.getElementById("chordSearch");
+
+const lyricSearch =
+    document.getElementById("lyricSearch");
+
+
+let chordFiles = [];
+
+let lyricFiles = [];
+
+
+
+/* =========================
+   GET FILES FROM GITHUB
+========================= */
+
+async function getFiles(folder) {
+
+    const url =
+        `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${folder}?ref=${GITHUB_BRANCH}`;
+
+    const response =
+        await fetch(url);
+
+    if (!response.ok) {
+
+        throw new Error(
+            "Could not load " + folder
+        );
+
+    }
+
+    return await response.json();
 }
 
-function showLyrics() {
-  lyricsSection.classList.remove("hidden");
-  chordsSection.classList.add("hidden");
 
-  lyricsBtn.classList.add("active");
-  chordsBtn.classList.remove("active");
 
-  displayLyrics(lyricsFiles);
+/* =========================
+   LOAD CHORDS
+========================= */
+
+async function loadChords() {
+
+    chordList.innerHTML = `
+        <div class="empty">
+            <div class="empty-icon">🎸</div>
+            <p>Loading chords...</p>
+        </div>
+    `;
+
+
+    try {
+
+        const files =
+            await getFiles("chords");
+
+
+        chordFiles =
+            files.filter(file =>
+                file.type === "file" &&
+                /\.(jpg|jpeg|png|webp|gif)$/i
+                .test(file.name)
+            );
+
+
+        displayChords(chordFiles);
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        chordList.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">🎵</div>
+                <p>Could not load chord songs.</p>
+            </div>
+        `;
+    }
 }
+
+
+
+/* =========================
+   LOAD LYRICS
+========================= */
+
+async function loadLyrics() {
+
+    lyricList.innerHTML = `
+        <div class="empty">
+            <div class="empty-icon">🎤</div>
+            <p>Loading lyrics...</p>
+        </div>
+    `;
+
+
+    try {
+
+        const files =
+            await getFiles("lyrics");
+
+
+        lyricFiles =
+            files.filter(file =>
+                file.type === "file"
+            );
+
+
+        displayLyrics(lyricFiles);
+
+
+    } catch (error) {
+
+        console.error(error);
+
+        lyricList.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">🎤</div>
+                <p>No lyrics added yet.</p>
+            </div>
+        `;
+    }
+}
+
+
+
+/* =========================
+   SONG NAME
+========================= */
+
+function songName(filename) {
+
+    return filename
+
+        .replace(/\.[^/.]+$/, "")
+
+        .replace(/[_-]+/g, " ")
+
+        .replace(/\s+/g, " ")
+
+        .trim();
+}
+
+
+
+/* =========================
+   DISPLAY CHORDS
+========================= */
 
 function displayChords(files) {
-  chordList.innerHTML = "";
 
-  if (files.length === 0) {
-    chordList.innerHTML = `
-      <div class="empty">
-        <div class="empty-icon">🎵</div>
-        <p>No chord songs found</p>
-      </div>
-    `;
-    return;
-  }
+    chordList.innerHTML = "";
 
-  files.forEach(song => {
-    const card = document.createElement("div");
-    card.className = "song-card";
 
-    const imagePath = `./chords/${encodeURIComponent(song.file)}`;
+    if (files.length === 0) {
 
-    card.innerHTML = `
-      <div class="song-image">
-        <img src="${imagePath}" alt="${song.name}">
-        <div class="play-icon">🎸</div>
-      </div>
+        chordList.innerHTML = `
+            <div class="empty">
 
-      <div class="song-info">
-        <h3>${song.name}</h3>
-        <p>Chord Sheet</p>
-      </div>
-    `;
+                <div class="empty-icon">
+                    🎸
+                </div>
 
-    card.querySelector(".song-image").addEventListener("click", () => {
-      openImage(imagePath, song.name);
+                <p>
+                    No chord songs found.
+                </p>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    files.forEach(file => {
+
+        const card =
+            document.createElement("article");
+
+
+        card.className =
+            "song-card";
+
+
+        const name =
+            songName(file.name);
+
+
+        card.innerHTML = `
+
+            <div class="song-image">
+
+                <img
+                    src="${file.download_url}"
+                    alt="${name}"
+                    loading="lazy"
+                >
+
+                <div class="play-icon">
+                    🎸
+                </div>
+
+            </div>
+
+
+            <div class="song-info">
+
+                <h3>
+                    ${name}
+                </h3>
+
+                <p>
+                    Chord Sheet
+                </p>
+
+            </div>
+
+        `;
+
+
+        const image =
+            card.querySelector(".song-image");
+
+
+        image.addEventListener(
+            "click",
+            () => {
+
+                openImage(
+                    file.download_url,
+                    name
+                );
+
+            }
+        );
+
+
+        chordList.appendChild(card);
+
     });
-
-    chordList.appendChild(card);
-  });
 }
+
+
+
+/* =========================
+   DISPLAY LYRICS
+========================= */
 
 function displayLyrics(files) {
-  lyricList.innerHTML = "";
 
-  if (files.length === 0) {
-    lyricList.innerHTML = `
-      <div class="empty">
-        <div class="empty-icon">🎤</div>
-        <p>No lyrics added yet</p>
-      </div>
-    `;
-    return;
-  }
-}
+    lyricList.innerHTML = "";
 
-function openImage(src, title) {
-  const modal = document.createElement("div");
-  modal.className = "image-modal";
 
-  modal.innerHTML = `
-    <div class="modal-top">
-      <span>🎵 ${title}</span>
-      <button class="close-modal">×</button>
-    </div>
+    if (files.length === 0) {
 
-    <div class="modal-content">
-      <img src="${src}" alt="${title}">
-    </div>
-  `;
+        lyricList.innerHTML = `
+            <div class="empty">
 
-  document.body.appendChild(modal);
+                <div class="empty-icon">
+                    🎤
+                </div>
 
-  modal.querySelector(".close-modal").onclick = () => {
-    modal.remove();
-  };
+                <p>
+                    No lyrics added yet.
+                </p>
 
-  modal.onclick = (e) => {
-    if (e.target === modal) {
-      modal.remove();
+            </div>
+        `;
+
+        return;
     }
-  };
+
+
+    files.forEach(file => {
+
+        const card =
+            document.createElement("article");
+
+
+        card.className =
+            "song-card";
+
+
+        const name =
+            songName(file.name);
+
+
+        const isImage =
+            /\.(jpg|jpeg|png|webp|gif)$/i
+            .test(file.name);
+
+
+        if (isImage) {
+
+            card.innerHTML = `
+
+                <div class="song-image">
+
+                    <img
+                        src="${file.download_url}"
+                        alt="${name}"
+                        loading="lazy"
+                    >
+
+                    <div class="play-icon">
+                        🎤
+                    </div>
+
+                </div>
+
+
+                <div class="song-info">
+
+                    <h3>
+                        ${name}
+                    </h3>
+
+                    <p>
+                        Lyrics
+                    </p>
+
+                </div>
+            `;
+
+
+            card.querySelector(
+                ".song-image"
+            ).addEventListener(
+                "click",
+                () => {
+
+                    openImage(
+                        file.download_url,
+                        name
+                    );
+
+                }
+            );
+
+        }
+
+
+        lyricList.appendChild(card);
+
+    });
 }
 
-chordsBtn.addEventListener("click", showChords);
-lyricsBtn.addEventListener("click", showLyrics);
 
-chordSearch.addEventListener("input", () => {
-  const value = chordSearch.value.toLowerCase();
 
-  const filtered = chordFiles.filter(song =>
-    song.name.toLowerCase().includes(value)
-  );
+/* =========================
+   IMAGE VIEWER
+========================= */
 
-  displayChords(filtered);
-});
+function openImage(url, title) {
 
-lyricSearch.addEventListener("input", () => {
-  const value = lyricSearch.value.toLowerCase();
+    const modal =
+        document.createElement("div");
 
-  const filtered = lyricsFiles.filter(song =>
-    song.name.toLowerCase().includes(value)
-  );
 
-  displayLyrics(filtered);
-});
+    modal.className =
+        "image-modal";
 
-showChords();
+
+    modal.innerHTML = `
+
+        <div class="modal-top">
+
+            <span>
+                🎵 ${title}
+            </span>
+
+            <button
+                class="close-modal"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="modal-content">
+
+            <img
+                src="${url}"
+                alt="${title}"
+            >
+
+        </div>
+    `;
+
+
+    document.body.appendChild(modal);
+
+
+    const closeButton =
+        modal.querySelector(
+            ".close-modal"
+        );
+
+
+    closeButton.onclick = () => {
+
+        modal.remove();
+
+    };
+
+
+    modal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target === modal
+            ) {
+
+                modal.remove();
+
+            }
+
+        }
+    );
+
+
+    document.addEventListener(
+        "keydown",
+        function closeWithEscape(event) {
+
+            if (
+                event.key === "Escape"
+            ) {
+
+                modal.remove();
+
+                document.removeEventListener(
+                    "keydown",
+                    closeWithEscape
+                );
+
+            }
+
+        }
+    );
+}
+
+
+
+/* =========================
+   CHORD SEARCH
+========================= */
+
+chordSearch.addEventListener(
+    "input",
+    event => {
+
+        const search =
+            event.target.value
+                .toLowerCase()
+                .trim();
+
+
+        const filtered =
+            chordFiles.filter(file =>
+                songName(file.name)
+                    .toLowerCase()
+                    .includes(search)
+            );
+
+
+        displayChords(filtered);
+
+    }
+);
+
+
+
+/* =========================
+   LYRIC SEARCH
+========================= */
+
+lyricSearch.addEventListener(
+    "input",
+    event => {
+
+        const search =
+            event.target.value
+                .toLowerCase()
+                .trim();
+
+
+        const filtered =
+            lyricFiles.filter(file =>
+                songName(file.name)
+                    .toLowerCase()
+                    .includes(search)
+            );
+
+
+        displayLyrics(filtered);
+
+    }
+);
+
+
+
+/* =========================
+   CHORD BUTTON
+========================= */
+
+chordsBtn.addEventListener(
+    "click",
+    () => {
+
+        chordsSection
+            .classList
+            .remove("hidden");
+
+
+        lyricsSection
+            .classList
+            .add("hidden");
+
+
+        chordsBtn
+            .classList
+            .add("active");
+
+
+        lyricsBtn
+            .classList
+            .remove("active");
+
+    }
+);
+
+
+
+/* =========================
+   LYRICS BUTTON
+========================= */
+
+lyricsBtn.addEventListener(
+    "click",
+    () => {
+
+        lyricsSection
+            .classList
+            .remove("hidden");
+
+
+        chordsSection
+            .classList
+            .add("hidden");
+
+
+        lyricsBtn
+            .classList
+            .add("active");
+
+
+        chordsBtn
+            .classList
+            .remove("active");
+
+    }
+);
+
+
+
+/* =========================
+   START APP
+========================= */
+
+loadChords();
+
+loadLyrics();
