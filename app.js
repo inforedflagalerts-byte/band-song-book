@@ -3,7 +3,7 @@
 // ==========================================
 
 // මෙතන ඔයාගේ GitHub username එක දාන්න
-const GITHUB_USERNAME = "inorefdflagalerts-byte";
+const GITHUB_USERNAME = "inforedflagalerts-byte";
 
 // මෙතන repository එකේ නම දාන්න
 const GITHUB_REPO = "band-song-book";
