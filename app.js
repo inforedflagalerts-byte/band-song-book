@@ -1,3 +1,4 @@
+```javascript
 const USERNAME = "inforedflagalerts-byte";
 const REPO = "band-song-book";
 const BRANCH = "main";
@@ -41,7 +42,12 @@ if ("serviceWorker" in navigator) {
         navigator.serviceWorker
             .register("./sw.js")
             .catch(error => {
-                console.log("Service worker error:", error);
+
+                console.log(
+                    "Service worker error:",
+                    error
+                );
+
             });
 
     });
@@ -106,7 +112,11 @@ async function loadFolder(folder) {
         );
 
         if (!response.ok) {
-            throw new Error("GitHub request failed");
+
+            throw new Error(
+                "GitHub request failed"
+            );
+
         }
 
         const files = await response.json();
@@ -220,7 +230,9 @@ function loadOfflineData() {
 async function cacheImages(files) {
 
     if (!("caches" in window)) {
+
         return;
+
     }
 
 
@@ -236,21 +248,11 @@ async function cacheImages(files) {
 
             try {
 
-                /*
-                 * Check whether image
-                 * is already cached.
-                 */
-
                 const existing =
                     await cache.match(
                         file.download_url
                     );
 
-
-                /*
-                 * Already downloaded.
-                 * Do NOT download again.
-                 */
 
                 if (existing) {
 
@@ -264,15 +266,11 @@ async function cacheImages(files) {
                 }
 
 
-                /*
-                 * New image.
-                 * Download and cache it.
-                 */
-
                 console.log(
                     "Downloading new image:",
                     file.name
                 );
+
 
                 await cache.add(
                     file.download_url
@@ -360,11 +358,6 @@ async function loadData() {
         `<div class="empty">🎤 Loading...</div>`;
 
 
-    /*
-     * First load saved songs.
-     * This allows offline use.
-     */
-
     loadOfflineData();
 
 
@@ -372,22 +365,12 @@ async function loadData() {
     renderLyrics(lyrics);
 
 
-    /*
-     * If data is OFF,
-     * stop here.
-     */
-
     if (!navigator.onLine) {
 
         return;
 
     }
 
-
-    /*
-     * Internet available.
-     * Check GitHub for updates.
-     */
 
     const newChords =
         await loadFolder("chords");
@@ -411,10 +394,6 @@ async function loadData() {
         );
 
 
-        /*
-         * Only new images are downloaded.
-         */
-
         cacheImages(chords);
 
     }
@@ -435,18 +414,10 @@ async function loadData() {
         );
 
 
-        /*
-         * Only new images are downloaded.
-         */
-
         cacheImages(lyrics);
 
     }
 
-
-    /*
-     * Show updated lists.
-     */
 
     renderChords(chords);
     renderLyrics(lyrics);
@@ -503,11 +474,6 @@ function createSongItem(file, type) {
 
     `;
 
-
-    /*
-     * Open full-screen image
-     * when song is tapped.
-     */
 
     item.addEventListener(
         "click",
@@ -632,6 +598,301 @@ function renderLyrics(list) {
 
 
 /* =========================================
+   PINCH ZOOM VARIABLES
+========================================= */
+
+let zoomScale = 1;
+
+let zoomX = 0;
+let zoomY = 0;
+
+let pinchStartDistance = 0;
+let pinchStartScale = 1;
+
+let dragStartX = 0;
+let dragStartY = 0;
+
+let dragStartZoomX = 0;
+let dragStartZoomY = 0;
+
+
+/* =========================================
+   UPDATE IMAGE ZOOM
+========================================= */
+
+function updateZoom() {
+
+    viewerImage.style.transform =
+        `translate3d(${zoomX}px, ${zoomY}px, 0) scale(${zoomScale})`;
+
+}
+
+
+/* =========================================
+   RESET ZOOM
+========================================= */
+
+function resetZoom() {
+
+    zoomScale = 1;
+
+    zoomX = 0;
+    zoomY = 0;
+
+    pinchStartDistance = 0;
+
+    viewerImage.style.transform =
+        "translate3d(0px, 0px, 0px) scale(1)";
+
+}
+
+
+/* =========================================
+   TOUCH DISTANCE
+========================================= */
+
+function getTouchDistance(touch1, touch2) {
+
+    const dx =
+        touch2.clientX - touch1.clientX;
+
+    const dy =
+        touch2.clientY - touch1.clientY;
+
+
+    return Math.sqrt(
+        dx * dx + dy * dy
+    );
+
+}
+
+
+/* =========================================
+   PINCH START
+========================================= */
+
+viewerImage.addEventListener(
+    "touchstart",
+    event => {
+
+        if (event.touches.length === 2) {
+
+            event.preventDefault();
+
+
+            pinchStartDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+
+            pinchStartScale =
+                zoomScale;
+
+
+        } else if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            event.preventDefault();
+
+
+            dragStartX =
+                event.touches[0].clientX;
+
+            dragStartY =
+                event.touches[0].clientY;
+
+
+            dragStartZoomX =
+                zoomX;
+
+            dragStartZoomY =
+                zoomY;
+
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =========================================
+   PINCH MOVE
+========================================= */
+
+viewerImage.addEventListener(
+    "touchmove",
+    event => {
+
+        /* -------------------------------
+           TWO FINGER PINCH
+        ------------------------------- */
+
+        if (event.touches.length === 2) {
+
+            event.preventDefault();
+
+
+            const currentDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+
+            if (pinchStartDistance > 0) {
+
+                let newScale =
+                    pinchStartScale *
+                    (
+                        currentDistance /
+                        pinchStartDistance
+                    );
+
+
+                /* Minimum zoom */
+
+                if (newScale < 1) {
+
+                    newScale = 1;
+
+                }
+
+
+                /* Maximum zoom */
+
+                if (newScale > 5) {
+
+                    newScale = 5;
+
+                }
+
+
+                zoomScale =
+                    newScale;
+
+
+                updateZoom();
+
+            }
+
+            return;
+
+        }
+
+
+        /* -------------------------------
+           ONE FINGER PAN
+        ------------------------------- */
+
+        if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            event.preventDefault();
+
+
+            const currentX =
+                event.touches[0].clientX;
+
+            const currentY =
+                event.touches[0].clientY;
+
+
+            zoomX =
+                dragStartZoomX +
+                (currentX - dragStartX);
+
+
+            zoomY =
+                dragStartZoomY +
+                (currentY - dragStartY);
+
+
+            updateZoom();
+
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =========================================
+   TOUCH END
+========================================= */
+
+viewerImage.addEventListener(
+    "touchend",
+    event => {
+
+        if (event.touches.length === 0) {
+
+            pinchStartDistance = 0;
+
+        }
+
+
+        if (zoomScale <= 1) {
+
+            resetZoom();
+
+        }
+
+    }
+);
+
+
+/* =========================================
+   PREVENT DOUBLE-TAP ZOOM
+========================================= */
+
+let lastTapTime = 0;
+
+viewerImage.addEventListener(
+    "touchend",
+    event => {
+
+        if (event.touches.length !== 0) {
+
+            return;
+
+        }
+
+
+        const currentTime =
+            Date.now();
+
+
+        if (
+            currentTime - lastTapTime <
+            300
+        ) {
+
+            event.preventDefault();
+
+        }
+
+
+        lastTapTime =
+            currentTime;
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =========================================
    OPEN FULL SCREEN VIEWER
 ========================================= */
 
@@ -640,13 +901,14 @@ async function openViewer(
     title
 ) {
 
+    /* Reset zoom before opening */
+
+    resetZoom();
+
+
     viewerTitle.textContent =
         title;
 
-
-    /*
-     * Show viewer immediately.
-     */
 
     viewer.classList.remove(
         "hidden"
@@ -657,27 +919,12 @@ async function openViewer(
         "hidden";
 
 
-    /*
-     * First try cached image.
-     */
-
     const cachedURL =
         await getImageURL(image);
 
 
-    /*
-     * If cached,
-     * use cached image.
-     */
-
     viewerImage.src =
         cachedURL;
-
-
-    /*
-     * If not cached and internet
-     * is available, original URL works.
-     */
 
 }
 
@@ -688,12 +935,16 @@ async function openViewer(
 
 function closeImageViewer() {
 
+    resetZoom();
+
+
     viewer.classList.add(
         "hidden"
     );
 
 
-    viewerImage.src = "";
+    viewerImage.src =
+        "";
 
 
     document.body.style.overflow =
@@ -878,191 +1129,10 @@ lyricsBtn.addEventListener(
     }
 );
 
-/* =========================================
-   PINCH ZOOM
-========================================= */
 
-let zoomScale = 1;
-let zoomX = 0;
-let zoomY = 0;
-
-let pinchStartDistance = 0;
-let pinchStartScale = 1;
-
-let dragStartX = 0;
-let dragStartY = 0;
-let dragStartZoomX = 0;
-let dragStartZoomY = 0;
-
-
-function updateZoom() {
-
-    viewerImage.style.transform =
-        `translate3d(${zoomX}px, ${zoomY}px, 0) scale(${zoomScale})`;
-
-}
-
-
-function getDistance(touch1, touch2) {
-
-    const x =
-        touch2.clientX - touch1.clientX;
-
-    const y =
-        touch2.clientY - touch1.clientY;
-
-    return Math.sqrt(
-        x * x + y * y
-    );
-
-}
-
-
-/* TWO FINGERS = PINCH ZOOM */
-
-viewerImage.addEventListener(
-    "touchstart",
-    event => {
-
-        if (event.touches.length === 2) {
-
-            pinchStartDistance =
-                getDistance(
-                    event.touches[0],
-                    event.touches[1]
-                );
-
-            pinchStartScale =
-                zoomScale;
-
-        }
-
-        else if (
-            event.touches.length === 1 &&
-            zoomScale > 1
-        ) {
-
-            dragStartX =
-                event.touches[0].clientX;
-
-            dragStartY =
-                event.touches[0].clientY;
-
-            dragStartZoomX =
-                zoomX;
-
-            dragStartZoomY =
-                zoomY;
-
-        }
-
-    },
-    {
-        passive: false
-    }
-);
-
-
-/* PINCH MOVE */
-
-viewerImage.addEventListener(
-    "touchmove",
-    event => {
-
-        if (event.touches.length === 2) {
-
-            event.preventDefault();
-
-            const currentDistance =
-                getDistance(
-                    event.touches[0],
-                    event.touches[1]
-                );
-
-            if (pinchStartDistance > 0) {
-
-                zoomScale =
-                    pinchStartScale *
-                    (
-                        currentDistance /
-                        pinchStartDistance
-                    );
-
-                /* Minimum */
-
-                if (zoomScale < 1) {
-                    zoomScale = 1;
-                }
-
-                /* Maximum */
-
-                if (zoomScale > 5) {
-                    zoomScale = 5;
-                }
-
-                updateZoom();
-
-            }
-
-        }
-
-        else if (
-            event.touches.length === 1 &&
-            zoomScale > 1
-        ) {
-
-            event.preventDefault();
-
-            zoomX =
-                dragStartZoomX +
-                (
-                    event.touches[0].clientX -
-                    dragStartX
-                );
-
-            zoomY =
-                dragStartZoomY +
-                (
-                    event.touches[0].clientY -
-                    dragStartY
-                );
-
-            updateZoom();
-
-        }
-
-    },
-    {
-        passive: false
-    }
-);
-
-
-/* RESET WHEN OPENING NEW IMAGE */
-
-const originalOpenViewer =
-    openViewer;
-
-openViewer = async function(
-    image,
-    title
-) {
-
-    zoomScale = 1;
-    zoomX = 0;
-    zoomY = 0;
-
-    viewerImage.style.transform =
-        "translate3d(0, 0, 0) scale(1)";
-
-    await originalOpenViewer(
-        image,
-        title
-    );
-
-};
 /* =========================================
    START APP
 ========================================= */
 
 loadData();
+```
