@@ -1,122 +1,208 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Song Chords & Lyrics</title>
+    <title>Band Song Book 🎵</title>
 
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-    <header>
-        <h1>🎵 Song Book</h1>
-        <p>Chords & Lyrics</p>
+    <!-- Background music decoration -->
+    <div class="music-bg">
+        <span>♪</span>
+        <span>♫</span>
+        <span>♩</span>
+        <span>♬</span>
+        <span>♪</span>
+        <span>♫</span>
+    </div>
+
+
+    <!-- HEADER -->
+
+    <header class="hero">
+
+        <div class="music-logo">
+            🎵
+        </div>
+
+        <p class="small-title">
+            BAND MUSIC LIBRARY
+        </p>
+
+        <h1>
+            Song <span>Book</span>
+        </h1>
+
+        <p class="subtitle">
+            Chords & Lyrics — Everything your band needs.
+        </p>
+
     </header>
 
-    <main>
 
-        <!-- HOME -->
-        <section id="home" class="screen active">
+    <!-- MAIN -->
 
-            <button class="main-button chord-button"
-                    onclick="openSection('chords')">
-                🎸 CHORDS
+    <main class="container">
+
+
+        <!-- BUTTONS -->
+
+        <div class="tabs">
+
+            <button
+                id="chordsBtn"
+                class="tab-btn active"
+            >
+                <span>🎸</span>
+                CHORDS
             </button>
 
-            <button class="main-button lyrics-button"
-                    onclick="openSection('lyrics')">
-                🎤 LYRICS
+
+            <button
+                id="lyricsBtn"
+                class="tab-btn"
+            >
+                <span>🎤</span>
+                LYRICS
             </button>
 
-        </section>
+        </div>
 
 
-        <!-- CHORDS -->
-        <section id="chords" class="screen">
+        <!-- CHORD SECTION -->
 
-            <div class="top-bar">
-                <button class="back-button" onclick="goHome()">←</button>
-                <h2>🎸 Chords</h2>
+        <section
+            id="chordsSection"
+            class="section"
+        >
+
+            <div class="section-header">
+
+                <div>
+
+                    <p class="section-label">
+                        GUITAR • BAND • MUSIC
+                    </p>
+
+                    <h2>
+                        Chord Library
+                    </h2>
+
+                </div>
+
+                <div class="music-symbol">
+                    ♫
+                </div>
+
             </div>
 
-            <input
-                type="text"
-                id="chordSearch"
-                class="search"
-                placeholder="Search chords..."
-                oninput="searchChords()"
+
+            <!-- SEARCH -->
+
+            <div class="search-box">
+
+                <span>⌕</span>
+
+                <input
+                    id="chordSearch"
+                    type="text"
+                    placeholder="Search chord songs..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <!-- SONGS -->
+
+            <div
+                id="chordList"
+                class="song-grid"
             >
 
-            <div id="chordList" class="song-list"></div>
+            </div>
 
         </section>
 
 
-        <!-- LYRICS -->
-        <section id="lyrics" class="screen">
 
-            <div class="top-bar">
-                <button class="back-button" onclick="goHome()">←</button>
-                <h2>🎤 Lyrics</h2>
+        <!-- LYRICS SECTION -->
+
+        <section
+            id="lyricsSection"
+            class="section hidden"
+        >
+
+            <div class="section-header">
+
+                <div>
+
+                    <p class="section-label">
+                        VOCALS • WORDS • MUSIC
+                    </p>
+
+                    <h2>
+                        Lyrics Library
+                    </h2>
+
+                </div>
+
+                <div class="music-symbol">
+                    ♪
+                </div>
+
             </div>
 
-            <input
-                type="text"
-                id="lyricsSearch"
-                class="search"
-                placeholder="Search lyrics..."
-                oninput="searchLyrics()"
+
+            <!-- SEARCH -->
+
+            <div class="search-box">
+
+                <span>⌕</span>
+
+                <input
+                    id="lyricSearch"
+                    type="text"
+                    placeholder="Search lyrics..."
+                    autocomplete="off"
+                >
+
+            </div>
+
+
+            <!-- LYRICS -->
+
+            <div
+                id="lyricList"
+                class="song-grid"
             >
 
-            <div id="lyricsList" class="song-list"></div>
-
-        </section>
-
-
-        <!-- CHORD VIEWER -->
-        <section id="chordViewer" class="screen">
-
-            <div class="top-bar">
-                <button class="back-button"
-                        onclick="openSection('chords')">
-                    ←
-                </button>
-
-                <h2 id="chordTitle"></h2>
             </div>
-
-            <div class="image-container">
-                <img id="chordImage" src="" alt="Chord">
-            </div>
-
-        </section>
-
-
-        <!-- LYRICS VIEWER -->
-        <section id="lyricsViewer" class="screen">
-
-            <div class="top-bar">
-                <button class="back-button"
-                        onclick="openSection('lyrics')">
-                    ←
-                </button>
-
-                <h2 id="lyricsTitle"></h2>
-            </div>
-
-            <div id="lyricsText" class="lyrics-content"></div>
 
         </section>
 
     </main>
 
 
+    <!-- FOOTER -->
+
     <footer>
-        <p>© 2026 Song Book</p>
+
+        <div class="footer-line"></div>
+
+        <p>
+            🎵 BAND SONG BOOK
+        </p>
+
+        <small>
+            Your music. Your songs. Your band.
+        </small>
+
     </footer>
 
 
@@ -124,4 +210,3 @@
 
 </body>
 </html>
-```
