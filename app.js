@@ -30,7 +30,9 @@ const closeViewer = document.getElementById("closeViewer");
 const status = document.getElementById("status");
 
 
-/* SERVICE WORKER */
+/* =========================================
+   SERVICE WORKER
+========================================= */
 
 if ("serviceWorker" in navigator) {
 
@@ -47,7 +49,9 @@ if ("serviceWorker" in navigator) {
 }
 
 
-/* ONLINE STATUS */
+/* =========================================
+   ONLINE STATUS
+========================================= */
 
 function updateStatus() {
 
@@ -71,27 +75,9 @@ window.addEventListener("online", updateStatus);
 window.addEventListener("offline", updateStatus);
 
 
-/* PREVENT PULL TO REFRESH */
-
-document.addEventListener(
-    "touchmove",
-    event => {
-
-        if (
-            window.scrollY <= 0 &&
-            event.touches &&
-            event.touches.length > 0
-        ) {
-            // Prevent browser pull-to-refresh
-            // only at the very top.
-        }
-
-    },
-    { passive: true }
-);
-
-
-/* NAME CLEANER */
+/* =========================================
+   NAME CLEANER
+========================================= */
 
 function cleanName(name) {
 
@@ -104,7 +90,9 @@ function cleanName(name) {
 }
 
 
-/* LOAD GITHUB FOLDER */
+/* =========================================
+   LOAD GITHUB FOLDER
+========================================= */
 
 async function loadFolder(folder) {
 
@@ -134,7 +122,10 @@ async function loadFolder(folder) {
 
     } catch (error) {
 
-        console.log("Folder load failed:", error);
+        console.log(
+            `Could not load ${folder}:`,
+            error
+        );
 
         return null;
 
@@ -143,7 +134,9 @@ async function loadFolder(folder) {
 }
 
 
-/* SAVE SONG LIST OFFLINE */
+/* =========================================
+   SAVE OFFLINE SONG LIST
+========================================= */
 
 function saveOfflineData() {
 
@@ -161,36 +154,56 @@ function saveOfflineData() {
 
     } catch (error) {
 
-        console.log("Local storage error:", error);
+        console.log(
+            "Local storage save error:",
+            error
+        );
 
     }
 
 }
 
 
-/* LOAD SAVED SONG LIST */
+/* =========================================
+   LOAD OFFLINE SONG LIST
+========================================= */
 
 function loadOfflineData() {
 
     try {
 
         const savedChords =
-            localStorage.getItem("bandSongBookChords");
+            localStorage.getItem(
+                "bandSongBookChords"
+            );
 
         const savedLyrics =
-            localStorage.getItem("bandSongBookLyrics");
+            localStorage.getItem(
+                "bandSongBookLyrics"
+            );
+
 
         if (savedChords) {
-            chords = JSON.parse(savedChords);
+
+            chords =
+                JSON.parse(savedChords);
+
         }
 
+
         if (savedLyrics) {
-            lyrics = JSON.parse(savedLyrics);
+
+            lyrics =
+                JSON.parse(savedLyrics);
+
         }
 
     } catch (error) {
 
-        console.log("Offline data error:", error);
+        console.log(
+            "Offline data error:",
+            error
+        );
 
         chords = [];
         lyrics = [];
@@ -200,22 +213,71 @@ function loadOfflineData() {
 }
 
 
-/* CACHE IMAGES */
+/* =========================================
+   CACHE ONLY NEW IMAGES
+========================================= */
 
 async function cacheImages(files) {
 
-    if (!("caches" in window)) return;
+    if (!("caches" in window)) {
+        return;
+    }
+
 
     try {
 
         const cache =
-            await caches.open(IMAGE_CACHE);
+            await caches.open(
+                IMAGE_CACHE
+            );
+
 
         for (const file of files) {
 
             try {
 
-                await cache.add(file.download_url);
+                /*
+                 * Check whether image
+                 * is already cached.
+                 */
+
+                const existing =
+                    await cache.match(
+                        file.download_url
+                    );
+
+
+                /*
+                 * Already downloaded.
+                 * Do NOT download again.
+                 */
+
+                if (existing) {
+
+                    console.log(
+                        "Already cached:",
+                        file.name
+                    );
+
+                    continue;
+
+                }
+
+
+                /*
+                 * New image.
+                 * Download and cache it.
+                 */
+
+                console.log(
+                    "Downloading new image:",
+                    file.name
+                );
+
+                await cache.add(
+                    file.download_url
+                );
+
 
             } catch (error) {
 
@@ -230,47 +292,64 @@ async function cacheImages(files) {
 
     } catch (error) {
 
-        console.log("Image cache error:", error);
+        console.log(
+            "Image cache error:",
+            error
+        );
 
     }
 
 }
 
 
-/* GET OFFLINE IMAGE */
+/* =========================================
+   GET CACHED IMAGE
+========================================= */
 
 async function getImageURL(url) {
 
     if (!("caches" in window)) {
+
         return url;
+
     }
+
 
     try {
 
         const response =
             await caches.match(url);
 
+
         if (response) {
 
             const blob =
                 await response.blob();
 
-            return URL.createObjectURL(blob);
+            return URL.createObjectURL(
+                blob
+            );
 
         }
 
     } catch (error) {
 
-        console.log("Cached image error:", error);
+        console.log(
+            "Cached image error:",
+            error
+        );
 
     }
+
 
     return url;
 
 }
 
 
-/* LOAD EVERYTHING */
+/* =========================================
+   LOAD DATA
+========================================= */
 
 async function loadData() {
 
@@ -281,20 +360,34 @@ async function loadData() {
         `<div class="empty">🎤 Loading...</div>`;
 
 
-    /* First load saved offline data */
+    /*
+     * First load saved songs.
+     * This allows offline use.
+     */
 
     loadOfflineData();
+
 
     renderChords(chords);
     renderLyrics(lyrics);
 
 
-    /* Then update from GitHub if online */
+    /*
+     * If data is OFF,
+     * stop here.
+     */
 
     if (!navigator.onLine) {
+
         return;
+
     }
 
+
+    /*
+     * Internet available.
+     * Check GitHub for updates.
+     */
 
     const newChords =
         await loadFolder("chords");
@@ -303,37 +396,57 @@ async function loadData() {
         await loadFolder("lyrics");
 
 
-    /* Update chords */
+    /* =====================================
+       UPDATE CHORDS
+    ===================================== */
 
     if (newChords !== null) {
 
         chords = newChords;
+
 
         localStorage.setItem(
             "bandSongBookChords",
             JSON.stringify(chords)
         );
 
+
+        /*
+         * Only new images are downloaded.
+         */
+
         cacheImages(chords);
 
     }
 
 
-    /* Update lyrics */
+    /* =====================================
+       UPDATE LYRICS
+    ===================================== */
 
     if (newLyrics !== null) {
 
         lyrics = newLyrics;
+
 
         localStorage.setItem(
             "bandSongBookLyrics",
             JSON.stringify(lyrics)
         );
 
+
+        /*
+         * Only new images are downloaded.
+         */
+
         cacheImages(lyrics);
 
     }
 
+
+    /*
+     * Show updated lists.
+     */
 
     renderChords(chords);
     renderLyrics(lyrics);
@@ -341,14 +454,17 @@ async function loadData() {
 }
 
 
-/* CREATE SONG ITEM */
+/* =========================================
+   CREATE SONG ITEM
+========================================= */
 
 function createSongItem(file, type) {
 
     const item =
         document.createElement("div");
 
-    item.className = "song-item";
+    item.className =
+        "song-item";
 
 
     const name =
@@ -367,6 +483,7 @@ function createSongItem(file, type) {
 
         </div>
 
+
         <div class="song-details">
 
             <div class="song-name">
@@ -379,12 +496,18 @@ function createSongItem(file, type) {
 
         </div>
 
+
         <div class="arrow">
             ›
         </div>
 
     `;
 
+
+    /*
+     * Open full-screen image
+     * when song is tapped.
+     */
 
     item.addEventListener(
         "click",
@@ -404,13 +527,16 @@ function createSongItem(file, type) {
 }
 
 
-/* RENDER CHORDS */
+/* =========================================
+   RENDER CHORDS
+========================================= */
 
 function renderChords(list) {
 
     document.getElementById(
         "chordCount"
-    ).textContent = list.length;
+    ).textContent =
+        list.length;
 
 
     chordList.innerHTML = "";
@@ -440,10 +566,12 @@ function renderChords(list) {
     list.forEach(file => {
 
         chordList.appendChild(
+
             createSongItem(
                 file,
                 "🎸 Chord Sheet"
             )
+
         );
 
     });
@@ -451,13 +579,16 @@ function renderChords(list) {
 }
 
 
-/* RENDER LYRICS */
+/* =========================================
+   RENDER LYRICS
+========================================= */
 
 function renderLyrics(list) {
 
     document.getElementById(
         "lyricCount"
-    ).textContent = list.length;
+    ).textContent =
+        list.length;
 
 
     lyricList.innerHTML = "";
@@ -487,10 +618,12 @@ function renderLyrics(list) {
     list.forEach(file => {
 
         lyricList.appendChild(
+
             createSongItem(
                 file,
                 "🎤 Lyrics"
             )
+
         );
 
     });
@@ -498,49 +631,80 @@ function renderLyrics(list) {
 }
 
 
-/* OPEN FULL SCREEN */
+/* =========================================
+   OPEN FULL SCREEN VIEWER
+========================================= */
 
-async function openViewer(image, title) {
+async function openViewer(
+    image,
+    title
+) {
 
-    viewerTitle.textContent = title;
-
-    viewer.classList.remove("hidden");
-
-    document.body.style.overflow = "hidden";
-
-    viewerImage.src = image;
+    viewerTitle.textContent =
+        title;
 
 
-    /* Try cached image */
+    /*
+     * Show viewer immediately.
+     */
+
+    viewer.classList.remove(
+        "hidden"
+    );
+
+
+    document.body.style.overflow =
+        "hidden";
+
+
+    /*
+     * First try cached image.
+     */
 
     const cachedURL =
         await getImageURL(image);
 
 
-    if (viewer.classList.contains("hidden")) {
-        return;
-    }
+    /*
+     * If cached,
+     * use cached image.
+     */
+
+    viewerImage.src =
+        cachedURL;
 
 
-    viewerImage.src = cachedURL;
+    /*
+     * If not cached and internet
+     * is available, original URL works.
+     */
 
 }
 
 
-/* CLOSE VIEWER */
+/* =========================================
+   CLOSE VIEWER
+========================================= */
 
 function closeImageViewer() {
 
-    viewer.classList.add("hidden");
+    viewer.classList.add(
+        "hidden"
+    );
+
 
     viewerImage.src = "";
 
-    document.body.style.overflow = "";
+
+    document.body.style.overflow =
+        "";
 
 }
 
 
-/* CLOSE BUTTON */
+/* =========================================
+   CLOSE BUTTON
+========================================= */
 
 closeViewer.addEventListener(
     "click",
@@ -548,7 +712,9 @@ closeViewer.addEventListener(
 );
 
 
-/* TAP OUTSIDE IMAGE */
+/* =========================================
+   TAP OUTSIDE VIEWER
+========================================= */
 
 viewer.addEventListener(
     "click",
@@ -556,7 +722,9 @@ viewer.addEventListener(
 
         if (
             event.target === viewer ||
-            event.target === document.querySelector(".viewer-body")
+            event.target === document.querySelector(
+                ".viewer-body"
+            )
         ) {
 
             closeImageViewer();
@@ -567,13 +735,17 @@ viewer.addEventListener(
 );
 
 
-/* ESC KEY */
+/* =========================================
+   ESC KEY
+========================================= */
 
 document.addEventListener(
     "keydown",
     event => {
 
-        if (event.key === "Escape") {
+        if (
+            event.key === "Escape"
+        ) {
 
             closeImageViewer();
 
@@ -583,7 +755,9 @@ document.addEventListener(
 );
 
 
-/* CHORD SEARCH */
+/* =========================================
+   CHORD SEARCH
+========================================= */
 
 chordSearch.addEventListener(
     "input",
@@ -596,13 +770,17 @@ chordSearch.addEventListener(
 
 
         const result =
-            chords.filter(file => {
+            chords.filter(
+                file => {
 
-                return cleanName(file.name)
+                    return cleanName(
+                        file.name
+                    )
                     .toLowerCase()
                     .includes(text);
 
-            });
+                }
+            );
 
 
         renderChords(result);
@@ -611,7 +789,9 @@ chordSearch.addEventListener(
 );
 
 
-/* LYRIC SEARCH */
+/* =========================================
+   LYRIC SEARCH
+========================================= */
 
 lyricSearch.addEventListener(
     "input",
@@ -624,13 +804,17 @@ lyricSearch.addEventListener(
 
 
         const result =
-            lyrics.filter(file => {
+            lyrics.filter(
+                file => {
 
-                return cleanName(file.name)
+                    return cleanName(
+                        file.name
+                    )
                     .toLowerCase()
                     .includes(text);
 
-            });
+                }
+            );
 
 
         renderLyrics(result);
@@ -639,42 +823,64 @@ lyricSearch.addEventListener(
 );
 
 
-/* CHORD TAB */
+/* =========================================
+   CHORD TAB
+========================================= */
 
 chordsBtn.addEventListener(
     "click",
     () => {
 
-        chordsSection.classList.remove("hidden");
+        chordsSection.classList.remove(
+            "hidden"
+        );
 
-        lyricsSection.classList.add("hidden");
+        lyricsSection.classList.add(
+            "hidden"
+        );
 
-        chordsBtn.classList.add("active");
+        chordsBtn.classList.add(
+            "active"
+        );
 
-        lyricsBtn.classList.remove("active");
+        lyricsBtn.classList.remove(
+            "active"
+        );
 
     }
 );
 
 
-/* LYRICS TAB */
+/* =========================================
+   LYRICS TAB
+========================================= */
 
 lyricsBtn.addEventListener(
     "click",
     () => {
 
-        lyricsSection.classList.remove("hidden");
+        lyricsSection.classList.remove(
+            "hidden"
+        );
 
-        chordsSection.classList.add("hidden");
+        chordsSection.classList.add(
+            "hidden"
+        );
 
-        lyricsBtn.classList.add("active");
+        lyricsBtn.classList.add(
+            "active"
+        );
 
-        chordsBtn.classList.remove("active");
+        chordsBtn.classList.remove(
+            "active"
+        );
 
     }
 );
 
 
-/* START */
+/* =========================================
+   START APP
+========================================= */
 
 loadData();
