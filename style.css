@@ -558,5 +558,8 @@ footer {
         width: 52px;
         height: 52px;
     }
-
+.viewer-body img {
+    touch-action: none;
+    will-change: transform;
+}
 }
