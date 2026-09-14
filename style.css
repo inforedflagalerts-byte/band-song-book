@@ -1,158 +1,145 @@
 * {
     box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    -webkit-tap-highlight-color: transparent;
 }
 
 html {
-    background: #07070b;
+    background: #08080d;
+    overscroll-behavior: none;
 }
 
 body {
+    margin: 0;
     min-height: 100vh;
+
     background:
         radial-gradient(
             circle at top,
-            #17102a 0,
-            #07070b 420px
+            #171020 0%,
+            #0b0a10 45%,
+            #07070b 100%
         );
 
-    color: #ffffff;
+    color: #f5f2f7;
 
     font-family:
         Arial,
         Helvetica,
         sans-serif;
 
-    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 
-/* =========================
-   TOP BAR
-========================= *//* =========================
-   TOP BAR
-========================= */
+/* TOP BAR */
 
 .topbar {
-    padding: 22px 18px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+
+    height: 72px;
 
     display: flex;
-
     align-items: center;
-
     justify-content: space-between;
 
-    max-width: 900px;
+    padding: 0 18px;
 
-    margin: auto;
+    background: rgba(8, 8, 13, 0.96);
 
-    border-bottom:
-        1px solid
-        rgba(255,255,255,0.07);
+    border-bottom: 1px solid #24202a;
 }
 
 
 .brand {
     display: flex;
-
     align-items: center;
-
-    gap: 12px;
+    gap: 11px;
 }
 
 
 .brand-icon {
-    width: 45px;
-    height: 45px;
+    width: 42px;
+    height: 42px;
 
     display: flex;
-
     align-items: center;
     justify-content: center;
 
     border-radius: 12px;
 
-    background: #713bc5;
+    background: #17121d;
 
-    font-size: 25px;
+    color: #cfa6ff;
 
-    box-shadow:
-        0 5px 20px
-        rgba(113,59,197,0.3);
+    font-size: 24px;
+
+    border: 1px solid #30243a;
 }
 
 
 .brand h1 {
-    font-size: 21px;
+    margin: 0;
 
+    font-size: 18px;
     font-weight: 700;
 }
 
 
 .brand p {
-    margin-top: 3px;
+    margin: 3px 0 0;
 
-    color: #85818e;
+    color: #8f8796;
 
     font-size: 12px;
 }
 
 
 .online-status {
-    color: #8c7b9d;
-
-    font-size: 10px;
-
-    white-space: nowrap;
+    font-size: 11px;
+    color: #9a829f;
 }
 
 
-/* =========================
-   MAIN
-========================= */
+/* MAIN */
 
 .container {
-    max-width: 900px;
+    width: 100%;
+    max-width: 700px;
 
     margin: auto;
 
-    padding:
-        20px 16px
-        50px;
+    padding: 18px 15px 30px;
 }
 
 
-/* =========================
-   TABS
-========================= */
+/* TABS */
 
 .tabs {
     display: flex;
-
     gap: 8px;
 
-    margin-bottom: 25px;
+    margin-bottom: 24px;
 }
 
 
 .tab {
     flex: 1;
 
-    padding: 13px;
+    height: 48px;
 
-    border-radius: 11px;
+    border: 1px solid #29232f;
 
-    border:
-        1px solid
-        rgba(255,255,255,0.08);
+    border-radius: 13px;
 
-    background: #101016;
+    background: #111017;
 
-    color: #85818e;
+    color: #918995;
 
-    font-size: 13px;
-
+    font-size: 14px;
     font-weight: 700;
 
     cursor: pointer;
@@ -160,98 +147,85 @@ body {
 
 
 .tab.active {
-    color: white;
+    background: #21172b;
 
-    background: #6534ad;
+    color: #e4c8ff;
 
-    border-color: #8c55d8;
+    border-color: #5a3971;
 }
 
 
-/* =========================
-   SECTION TITLE
-========================= */
+/* SECTION TITLE */
 
 .section-title {
     display: flex;
-
+    justify-content: space-between;
     align-items: center;
 
-    justify-content: space-between;
-
-    margin-bottom: 17px;
+    margin-bottom: 15px;
 }
 
 
 .section-title small {
-    color: #8a63b4;
+    color: #756c7c;
 
     font-size: 9px;
 
-    letter-spacing: 2px;
+    letter-spacing: 1.5px;
 }
 
 
 .section-title h2 {
-    margin-top: 4px;
+    margin: 4px 0 0;
 
-    font-size: 25px;
+    font-size: 22px;
 }
 
 
 .section-title > span {
     min-width: 30px;
-
     height: 30px;
 
     display: flex;
-
     align-items: center;
-
     justify-content: center;
 
-    border-radius: 50%;
+    border-radius: 10px;
 
-    background: #17131f;
+    background: #17121d;
 
-    color: #a879db;
+    color: #bd91df;
 
     font-size: 12px;
 }
 
 
-/* =========================
-   SEARCH
-========================= */
+/* SEARCH */
 
 .search {
-    height: 48px;
+    height: 46px;
 
     display: flex;
-
     align-items: center;
 
-    gap: 10px;
+    gap: 9px;
 
-    padding:
-        0 14px;
+    padding: 0 13px;
 
-    margin-bottom: 15px;
-
-    border-radius: 11px;
+    margin-bottom: 14px;
 
     background: #101016;
 
-    border:
-        1px solid
-        rgba(255,255,255,0.07);
+    border: 1px solid #25212b;
+
+    border-radius: 12px;
 }
 
 
 .search span {
-    color: #9360d0;
+    color: #817786;
 
-    font-size: 23px;
+    font-size: 22px;
 }
 
 
@@ -259,77 +233,68 @@ body {
     width: 100%;
 
     border: 0;
-
     outline: 0;
 
     background: transparent;
 
-    color: white;
+    color: #f5f2f7;
 
     font-size: 14px;
+
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 
 .search input::placeholder {
-    color: #66636e;
+    color: #6f6875;
 }
 
 
-/* =========================
-   SONG LIST
-========================= */
+/* SONG LIST */
 
 .song-list {
     display: flex;
 
     flex-direction: column;
 
-    gap: 9px;
+    gap: 8px;
 }
 
 
-/* =========================
-   SONG ITEM
-========================= */
-
 .song-item {
-    min-height: 76px;
+    width: 100%;
+    min-height: 70px;
 
     display: flex;
-
     align-items: center;
 
-    gap: 13px;
+    gap: 12px;
 
-    padding: 9px;
-
-    border-radius: 13px;
+    padding: 7px 11px 7px 7px;
 
     background: #101016;
 
-    border:
-        1px solid
-        rgba(255,255,255,0.07);
+    border: 1px solid #24202a;
+
+    border-radius: 13px;
 
     cursor: pointer;
 
-    transition:
-        background 0.15s,
-        border-color 0.15s;
+    transition: background 0.12s;
 }
 
 
 .song-item:active {
-    background: #191323;
-
-    border-color: #7240ad;
+    background: #1a1520;
 }
 
 
-.thumbnail {
-    width: 58px;
+/* THUMBNAIL */
 
-    height: 58px;
+.thumbnail {
+    width: 56px;
+    height: 56px;
 
     flex-shrink: 0;
 
@@ -337,13 +302,14 @@ body {
 
     border-radius: 9px;
 
-    background: #19191f;
+    background: #17141b;
+
+    border: 1px solid #2a2430;
 }
 
 
 .thumbnail img {
     width: 100%;
-
     height: 100%;
 
     display: block;
@@ -351,6 +317,8 @@ body {
     object-fit: cover;
 }
 
+
+/* SONG DETAILS */
 
 .song-details {
     min-width: 0;
@@ -360,46 +328,46 @@ body {
 
 
 .song-name {
-    font-size: 14px;
-
-    font-weight: 700;
-
-    white-space: nowrap;
-
     overflow: hidden;
 
+    white-space: nowrap;
     text-overflow: ellipsis;
+
+    color: #eee9f1;
+
+    font-size: 14px;
+    font-weight: 600;
 }
 
 
 .song-type {
     margin-top: 5px;
 
-    color: #716d78;
+    color: #77707d;
 
     font-size: 11px;
 }
 
 
+/* ARROW */
+
 .arrow {
-    color: #77717f;
+    color: #756b7d;
 
-    font-size: 20px;
+    font-size: 25px;
 
-    padding-right: 5px;
+    padding-left: 5px;
 }
 
 
-/* =========================
-   EMPTY
-========================= */
+/* EMPTY */
 
 .empty {
-    padding: 45px 15px;
+    padding: 35px 15px;
 
     text-align: center;
 
-    color: #68646e;
+    color: #716a76;
 
     font-size: 13px;
 }
@@ -412,18 +380,14 @@ body {
 }
 
 
-/* =========================
-   HIDDEN
-========================= */
+/* HIDDEN */
 
 .hidden {
     display: none !important;
 }
 
 
-/* =========================
-   VIEWER
-========================= */
+/* FULL SCREEN VIEWER */
 
 .viewer {
     position: fixed;
@@ -432,11 +396,18 @@ body {
 
     z-index: 1000;
 
-    background: #050507;
-
     display: flex;
 
     flex-direction: column;
+
+    background: #000;
+
+    width: 100vw;
+    height: 100vh;
+
+    height: 100dvh;
+
+    overscroll-behavior: none;
 }
 
 
@@ -448,37 +419,34 @@ body {
     display: flex;
 
     align-items: center;
-
     justify-content: space-between;
 
-    padding:
-        0 14px;
+    padding: 0 12px 0 16px;
 
-    background: #0d0d12;
+    background: #08080d;
 
-    border-bottom:
-        1px solid
-        rgba(255,255,255,0.08);
+    border-bottom: 1px solid #222;
 }
 
 
 .viewer-title {
-    max-width: 80%;
+    max-width: calc(100% - 55px);
 
     overflow: hidden;
 
     white-space: nowrap;
-
     text-overflow: ellipsis;
 
-    font-size: 13px;
+    color: #eee;
+
+    font-size: 14px;
+    font-weight: 600;
 }
 
 
 .close {
-    width: 38px;
-
-    height: 38px;
+    width: 42px;
+    height: 42px;
 
     border: 0;
 
@@ -486,9 +454,11 @@ body {
 
     background: #1b1820;
 
-    color: white;
+    color: #fff;
 
-    font-size: 27px;
+    font-size: 28px;
+
+    line-height: 1;
 
     cursor: pointer;
 }
@@ -497,77 +467,96 @@ body {
 .viewer-body {
     flex: 1;
 
-    overflow: auto;
+    min-height: 0;
 
     display: flex;
 
-    align-items: flex-start;
-
+    align-items: center;
     justify-content: center;
 
-    padding: 10px;
+    overflow: auto;
+
+    padding: 0;
+
+    background: #000;
+
+    overscroll-behavior: none;
 }
 
 
 .viewer-body img {
     display: block;
 
-    width: auto;
-
     max-width: 100%;
+    max-height: 100%;
 
+    width: auto;
     height: auto;
 
-    max-height: none;
+    object-fit: contain;
+
+    user-select: none;
+
+    -webkit-user-drag: none;
 }
 
 
-/* =========================
-   FOOTER
-========================= */
+/* FOOTER */
 
 footer {
+    padding: 15px 15px 25px;
+
     text-align: center;
 
-    padding:
-        15px 10px
-        30px;
+    color: #5e5864;
 
-    color: #57535e;
-}
-
-
-.footer-note {
-    margin-bottom: 6px;
-
-    color: #80629c;
-
-    font-size: 11px;
-}
-
-
-footer small {
     font-size: 10px;
 }
 
 
-/* =========================
-   DESKTOP
-========================= */
+.footer-note {
+    margin-bottom: 5px;
 
-@media (min-width: 650px) {
+    color: #756d7b;
+}
 
-    .song-list {
-        gap: 10px;
+
+/* MOBILE */
+
+@media (max-width: 480px) {
+
+    .topbar {
+        height: 66px;
+
+        padding: 0 13px;
+    }
+
+    .brand-icon {
+        width: 38px;
+        height: 38px;
+
+        font-size: 21px;
+    }
+
+    .brand h1 {
+        font-size: 16px;
+    }
+
+    .container {
+        padding: 15px 11px 25px;
+    }
+
+    .section-title h2 {
+        font-size: 20px;
     }
 
     .song-item {
-        min-height: 82px;
+        min-height: 66px;
     }
 
     .thumbnail {
-        width: 64px;
-        height: 64px;
+        width: 52px;
+        height: 52px;
     }
 
 }
