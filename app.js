@@ -878,7 +878,189 @@ lyricsBtn.addEventListener(
     }
 );
 
+/* =========================================
+   PINCH ZOOM
+========================================= */
 
+let zoomScale = 1;
+let zoomX = 0;
+let zoomY = 0;
+
+let pinchStartDistance = 0;
+let pinchStartScale = 1;
+
+let dragStartX = 0;
+let dragStartY = 0;
+let dragStartZoomX = 0;
+let dragStartZoomY = 0;
+
+
+function updateZoom() {
+
+    viewerImage.style.transform =
+        `translate3d(${zoomX}px, ${zoomY}px, 0) scale(${zoomScale})`;
+
+}
+
+
+function getDistance(touch1, touch2) {
+
+    const x =
+        touch2.clientX - touch1.clientX;
+
+    const y =
+        touch2.clientY - touch1.clientY;
+
+    return Math.sqrt(
+        x * x + y * y
+    );
+
+}
+
+
+/* TWO FINGERS = PINCH ZOOM */
+
+viewerImage.addEventListener(
+    "touchstart",
+    event => {
+
+        if (event.touches.length === 2) {
+
+            pinchStartDistance =
+                getDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+            pinchStartScale =
+                zoomScale;
+
+        }
+
+        else if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            dragStartX =
+                event.touches[0].clientX;
+
+            dragStartY =
+                event.touches[0].clientY;
+
+            dragStartZoomX =
+                zoomX;
+
+            dragStartZoomY =
+                zoomY;
+
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* PINCH MOVE */
+
+viewerImage.addEventListener(
+    "touchmove",
+    event => {
+
+        if (event.touches.length === 2) {
+
+            event.preventDefault();
+
+            const currentDistance =
+                getDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+            if (pinchStartDistance > 0) {
+
+                zoomScale =
+                    pinchStartScale *
+                    (
+                        currentDistance /
+                        pinchStartDistance
+                    );
+
+                /* Minimum */
+
+                if (zoomScale < 1) {
+                    zoomScale = 1;
+                }
+
+                /* Maximum */
+
+                if (zoomScale > 5) {
+                    zoomScale = 5;
+                }
+
+                updateZoom();
+
+            }
+
+        }
+
+        else if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            event.preventDefault();
+
+            zoomX =
+                dragStartZoomX +
+                (
+                    event.touches[0].clientX -
+                    dragStartX
+                );
+
+            zoomY =
+                dragStartZoomY +
+                (
+                    event.touches[0].clientY -
+                    dragStartY
+                );
+
+            updateZoom();
+
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* RESET WHEN OPENING NEW IMAGE */
+
+const originalOpenViewer =
+    openViewer;
+
+openViewer = async function(
+    image,
+    title
+) {
+
+    zoomScale = 1;
+    zoomX = 0;
+    zoomY = 0;
+
+    viewerImage.style.transform =
+        "translate3d(0, 0, 0) scale(1)";
+
+    await originalOpenViewer(
+        image,
+        title
+    );
+
+};
 /* =========================================
    START APP
 ========================================= */
