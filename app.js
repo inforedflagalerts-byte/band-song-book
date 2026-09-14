@@ -1,7 +1,14 @@
-const GITHUB_USERNAME = "inforedflagalerts-byte";
-const GITHUB_REPO = "band-song-book";
-const GITHUB_BRANCH = "main";
+const USERNAME = "inforedflagalerts-byte";
+const REPO = "band-song-book";
+const BRANCH = "main";
 
+const API =
+    `https://api.github.com/repos/${USERNAME}/${REPO}/contents`;
+
+const CACHE_NAME = "song-book-images-v1";
+
+let chords = [];
+let lyrics = [];
 
 const chordsBtn =
     document.getElementById("chordsBtn");
@@ -9,13 +16,11 @@ const chordsBtn =
 const lyricsBtn =
     document.getElementById("lyricsBtn");
 
-
 const chordsSection =
     document.getElementById("chordsSection");
 
 const lyricsSection =
     document.getElementById("lyricsSection");
-
 
 const chordList =
     document.getElementById("chordList");
@@ -23,142 +28,105 @@ const chordList =
 const lyricList =
     document.getElementById("lyricList");
 
-
 const chordSearch =
     document.getElementById("chordSearch");
 
 const lyricSearch =
     document.getElementById("lyricSearch");
 
+const viewer =
+    document.getElementById("viewer");
 
-let chordFiles = [];
+const viewerImage =
+    document.getElementById("viewerImage");
 
-let lyricFiles = [];
+const viewerTitle =
+    document.getElementById("viewerTitle");
+
+const closeViewer =
+    document.getElementById("closeViewer");
+
+const status =
+    document.getElementById("status");
 
 
 
 /* =========================
-   GET FILES FROM GITHUB
+   SERVICE WORKER
 ========================= */
 
-async function getFiles(folder) {
+if ("serviceWorker" in navigator) {
 
-    const url =
-        `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${folder}?ref=${GITHUB_BRANCH}`;
+    window.addEventListener(
+        "load",
+        () => {
 
-    const response =
-        await fetch(url);
+            navigator.serviceWorker.register(
+                "./sw.js"
+            ).catch(error => {
 
-    if (!response.ok) {
+                console.log(
+                    "Service worker error:",
+                    error
+                );
 
-        throw new Error(
-            "Could not load " + folder
-        );
+            });
 
-    }
+        }
+    );
 
-    return await response.json();
 }
 
 
 
 /* =========================
-   LOAD CHORDS
+   STATUS
 ========================= */
 
-async function loadChords() {
+function updateStatus() {
 
-    chordList.innerHTML = `
-        <div class="empty">
-            <div class="empty-icon">🎸</div>
-            <p>Loading chords...</p>
-        </div>
-    `;
+    if (navigator.onLine) {
 
+        status.textContent =
+            "● Online";
 
-    try {
+        status.style.color =
+            "#73b87b";
 
-        const files =
-            await getFiles("chords");
+    } else {
 
+        status.textContent =
+            "● Offline Ready";
 
-        chordFiles =
-            files.filter(file =>
-                file.type === "file" &&
-                /\.(jpg|jpeg|png|webp|gif)$/i
-                .test(file.name)
-            );
+        status.style.color =
+            "#9a829f";
 
-
-        displayChords(chordFiles);
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        chordList.innerHTML = `
-            <div class="empty">
-                <div class="empty-icon">🎵</div>
-                <p>Could not load chord songs.</p>
-            </div>
-        `;
     }
+
 }
+
+
+updateStatus();
+
+window.addEventListener(
+    "online",
+    updateStatus
+);
+
+window.addEventListener(
+    "offline",
+    updateStatus
+);
 
 
 
 /* =========================
-   LOAD LYRICS
+   CLEAN SONG NAME
 ========================= */
 
-async function loadLyrics() {
+function cleanName(name) {
 
-    lyricList.innerHTML = `
-        <div class="empty">
-            <div class="empty-icon">🎤</div>
-            <p>Loading lyrics...</p>
-        </div>
-    `;
-
-
-    try {
-
-        const files =
-            await getFiles("lyrics");
-
-
-        lyricFiles =
-            files.filter(file =>
-                file.type === "file"
-            );
-
-
-        displayLyrics(lyricFiles);
-
-
-    } catch (error) {
-
-        console.error(error);
-
-        lyricList.innerHTML = `
-            <div class="empty">
-                <div class="empty-icon">🎤</div>
-                <p>No lyrics added yet.</p>
-            </div>
-        `;
-    }
-}
-
-
-
-/* =========================
-   SONG NAME
-========================= */
-
-function songName(filename) {
-
-    return filename
+    return name
 
         .replace(/\.[^/.]+$/, "")
 
@@ -167,20 +135,190 @@ function songName(filename) {
         .replace(/\s+/g, " ")
 
         .trim();
+
 }
 
 
 
 /* =========================
-   DISPLAY CHORDS
+   LOAD FOLDER
 ========================= */
 
-function displayChords(files) {
+async function loadFolder(folder) {
+
+    try {
+
+        const response =
+            await fetch(
+                `${API}/${folder}?ref=${BRANCH}`,
+                {
+                    cache: "no-store"
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "GitHub request failed"
+            );
+
+        }
+
+
+        const files =
+            await response.json();
+
+
+        return files.filter(file => {
+
+            return (
+                file.type === "file" &&
+                /\.(jpg|jpeg|png|webp)$/i
+                    .test(file.name)
+            );
+
+        });
+
+
+    } catch (error) {
+
+        console.log(
+            "Using offline data:",
+            error
+        );
+
+        return [];
+
+    }
+
+}
+
+
+
+/* =========================
+   SAVE IMAGE CACHE
+========================= */
+
+async function cacheImages(files) {
+
+    if (!("caches" in window)) {
+        return;
+    }
+
+
+    try {
+
+        const cache =
+            await caches.open(
+                CACHE_NAME
+            );
+
+
+        for (const file of files) {
+
+            try {
+
+                await cache.add(
+                    file.download_url
+                );
+
+            } catch (error) {
+
+                console.log(
+                    "Image cache skipped:",
+                    file.name
+                );
+
+            }
+
+        }
+
+    } catch (error) {
+
+        console.log(
+            "Cache error:",
+            error
+        );
+
+    }
+
+}
+
+
+
+/* =========================
+   LOAD DATA
+========================= */
+
+async function loadData() {
+
+    chordList.innerHTML = `
+        <div class="empty">
+            🎸 Loading...
+        </div>
+    `;
+
+
+    lyricList.innerHTML = `
+        <div class="empty">
+            🎤 Loading...
+        </div>
+    `;
+
+
+    if (navigator.onLine) {
+
+        const newChords =
+            await loadFolder("chords");
+
+        const newLyrics =
+            await loadFolder("lyrics");
+
+
+        if (newChords.length > 0) {
+
+            chords = newChords;
+
+            cacheImages(chords);
+
+        }
+
+
+        if (newLyrics.length > 0) {
+
+            lyrics = newLyrics;
+
+            cacheImages(lyrics);
+
+        }
+
+    }
+
+
+    renderChords(chords);
+
+    renderLyrics(lyrics);
+
+}
+
+
+
+/* =========================
+   RENDER CHORDS
+========================= */
+
+function renderChords(list) {
+
+    document.getElementById(
+        "chordCount"
+    ).textContent = list.length;
+
 
     chordList.innerHTML = "";
 
 
-    if (files.length === 0) {
+    if (list.length === 0) {
 
         chordList.innerHTML = `
             <div class="empty">
@@ -189,97 +327,48 @@ function displayChords(files) {
                     🎸
                 </div>
 
-                <p>
-                    No chord songs found.
-                </p>
+                No chord sheets available.
 
             </div>
         `;
 
         return;
+
     }
 
 
-    files.forEach(file => {
+    list.forEach(file => {
 
-        const card =
-            document.createElement("article");
-
-
-        card.className =
-            "song-card";
-
-
-        const name =
-            songName(file.name);
+        const item =
+            createSongItem(
+                file,
+                "🎸 Chord Sheet"
+            );
 
 
-        card.innerHTML = `
-
-            <div class="song-image">
-
-                <img
-                    src="${file.download_url}"
-                    alt="${name}"
-                    loading="lazy"
-                >
-
-                <div class="play-icon">
-                    🎸
-                </div>
-
-            </div>
-
-
-            <div class="song-info">
-
-                <h3>
-                    ${name}
-                </h3>
-
-                <p>
-                    Chord Sheet
-                </p>
-
-            </div>
-
-        `;
-
-
-        const image =
-            card.querySelector(".song-image");
-
-
-        image.addEventListener(
-            "click",
-            () => {
-
-                openImage(
-                    file.download_url,
-                    name
-                );
-
-            }
-        );
-
-
-        chordList.appendChild(card);
+        chordList.appendChild(item);
 
     });
+
 }
 
 
 
 /* =========================
-   DISPLAY LYRICS
+   RENDER LYRICS
 ========================= */
 
-function displayLyrics(files) {
+function renderLyrics(list) {
+
+    document.getElementById(
+        "lyricCount"
+    ).textContent = list.length;
+
 
     lyricList.innerHTML = "";
 
 
-    if (files.length === 0) {
+    if (list.length === 0) {
 
         lyricList.innerHTML = `
             <div class="empty">
@@ -288,89 +377,102 @@ function displayLyrics(files) {
                     🎤
                 </div>
 
-                <p>
-                    No lyrics added yet.
-                </p>
+                No lyrics available.
 
             </div>
         `;
 
         return;
+
     }
 
 
-    files.forEach(file => {
+    list.forEach(file => {
 
-        const card =
-            document.createElement("article");
-
-
-        card.className =
-            "song-card";
-
-
-        const name =
-            songName(file.name);
+        const item =
+            createSongItem(
+                file,
+                "🎤 Lyrics"
+            );
 
 
-        const isImage =
-            /\.(jpg|jpeg|png|webp|gif)$/i
-            .test(file.name);
+        lyricList.appendChild(item);
+
+    });
+
+}
 
 
-        if (isImage) {
 
-            card.innerHTML = `
+/* =========================
+   CREATE LIST ITEM
+========================= */
 
-                <div class="song-image">
+function createSongItem(
+    file,
+    type
+) {
 
-                    <img
-                        src="${file.download_url}"
-                        alt="${name}"
-                        loading="lazy"
-                    >
-
-                    <div class="play-icon">
-                        🎤
-                    </div>
-
-                </div>
+    const item =
+        document.createElement("div");
 
 
-                <div class="song-info">
-
-                    <h3>
-                        ${name}
-                    </h3>
-
-                    <p>
-                        Lyrics
-                    </p>
-
-                </div>
-            `;
+    item.className =
+        "song-item";
 
 
-            card.querySelector(
-                ".song-image"
-            ).addEventListener(
-                "click",
-                () => {
+    const name =
+        cleanName(file.name);
 
-                    openImage(
-                        file.download_url,
-                        name
-                    );
 
-                }
+    item.innerHTML = `
+
+        <div class="thumbnail">
+
+            <img
+                src="${file.download_url}"
+                alt=""
+                loading="lazy"
+            >
+
+        </div>
+
+
+        <div class="song-details">
+
+            <div class="song-name">
+                ${name}
+            </div>
+
+            <div class="song-type">
+                ${type}
+            </div>
+
+        </div>
+
+
+        <div class="arrow">
+            ›
+        </div>
+
+    `;
+
+
+    item.addEventListener(
+        "click",
+        () => {
+
+            openViewer(
+                file.download_url,
+                name
             );
 
         }
+    );
 
 
-        lyricList.appendChild(card);
+    return item;
 
-    });
 }
 
 
@@ -379,96 +481,87 @@ function displayLyrics(files) {
    IMAGE VIEWER
 ========================= */
 
-function openImage(url, title) {
+function openViewer(
+    image,
+    title
+) {
 
-    const modal =
-        document.createElement("div");
-
-
-    modal.className =
-        "image-modal";
-
-
-    modal.innerHTML = `
-
-        <div class="modal-top">
-
-            <span>
-                🎵 ${title}
-            </span>
-
-            <button
-                class="close-modal"
-            >
-                ×
-            </button>
-
-        </div>
+    viewerTitle.textContent =
+        title;
 
 
-        <div class="modal-content">
-
-            <img
-                src="${url}"
-                alt="${title}"
-            >
-
-        </div>
-    `;
+    viewerImage.src =
+        image;
 
 
-    document.body.appendChild(modal);
-
-
-    const closeButton =
-        modal.querySelector(
-            ".close-modal"
-        );
-
-
-    closeButton.onclick = () => {
-
-        modal.remove();
-
-    };
-
-
-    modal.addEventListener(
-        "click",
-        event => {
-
-            if (
-                event.target === modal
-            ) {
-
-                modal.remove();
-
-            }
-
-        }
+    viewer.classList.remove(
+        "hidden"
     );
 
 
-    document.addEventListener(
-        "keydown",
-        function closeWithEscape(event) {
+    document.body.style.overflow =
+        "hidden";
 
-            if (
-                event.key === "Escape"
-            ) {
-
-                modal.remove();
-
-                document.removeEventListener(
-                    "keydown",
-                    closeWithEscape
-                );
-
-            }
-
-        }
-    );
 }
+
+
+
+/* =========================
+   CLOSE VIEWER
+========================= */
+
+function closeImageViewer() {
+
+    viewer.classList.add(
+        "hidden"
+    );
+
+
+    viewerImage.src = "";
+
+
+    document.body.style.overflow =
+        "";
+
+}
+
+
+closeViewer.addEventListener(
+    "click",
+    closeImageViewer
+);
+
+
+viewer.addEventListener(
+    "click",
+    event => {
+
+        if (
+            event.target === viewer
+        ) {
+
+            closeImageViewer();
+
+        }
+
+    }
+);
+
+
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (
+            event.key === "Escape"
+        ) {
+
+            closeImageViewer();
+
+        }
+
+    }
+);
 
 
 
@@ -480,21 +573,23 @@ chordSearch.addEventListener(
     "input",
     event => {
 
-        const search =
+        const text =
             event.target.value
                 .toLowerCase()
                 .trim();
 
 
-        const filtered =
-            chordFiles.filter(file =>
-                songName(file.name)
+        const result =
+            chords.filter(file =>
+
+                cleanName(file.name)
                     .toLowerCase()
-                    .includes(search)
+                    .includes(text)
+
             );
 
 
-        displayChords(filtered);
+        renderChords(result);
 
     }
 );
@@ -509,21 +604,23 @@ lyricSearch.addEventListener(
     "input",
     event => {
 
-        const search =
+        const text =
             event.target.value
                 .toLowerCase()
                 .trim();
 
 
-        const filtered =
-            lyricFiles.filter(file =>
-                songName(file.name)
+        const result =
+            lyrics.filter(file =>
+
+                cleanName(file.name)
                     .toLowerCase()
-                    .includes(search)
+                    .includes(text)
+
             );
 
 
-        displayLyrics(filtered);
+        renderLyrics(result);
 
     }
 );
@@ -531,62 +628,43 @@ lyricSearch.addEventListener(
 
 
 /* =========================
-   CHORD BUTTON
+   BUTTONS
 ========================= */
 
 chordsBtn.addEventListener(
     "click",
     () => {
 
-        chordsSection
-            .classList
+        chordsSection.classList
             .remove("hidden");
 
-
-        lyricsSection
-            .classList
+        lyricsSection.classList
             .add("hidden");
 
-
-        chordsBtn
-            .classList
+        chordsBtn.classList
             .add("active");
 
-
-        lyricsBtn
-            .classList
+        lyricsBtn.classList
             .remove("active");
 
     }
 );
 
-
-
-/* =========================
-   LYRICS BUTTON
-========================= */
 
 lyricsBtn.addEventListener(
     "click",
     () => {
 
-        lyricsSection
-            .classList
+        lyricsSection.classList
             .remove("hidden");
 
-
-        chordsSection
-            .classList
+        chordsSection.classList
             .add("hidden");
 
-
-        lyricsBtn
-            .classList
+        lyricsBtn.classList
             .add("active");
 
-
-        chordsBtn
-            .classList
+        chordsBtn.classList
             .remove("active");
 
     }
@@ -595,9 +673,7 @@ lyricsBtn.addEventListener(
 
 
 /* =========================
-   START APP
+   START
 ========================= */
 
-loadChords();
-
-loadLyrics();
+loadData();
