@@ -2,195 +2,166 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#08080d">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
 
+    <meta name="theme-color" content="#08080d">
     <meta name="description" content="Band Song Book - Chords and Lyrics">
 
-    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+
     <title>Band Song Book</title>
 </head>
 
 <body>
 
-    <header class="topbar">
+<header class="topbar">
 
-        <div class="brand">
-            <div class="brand-icon">♫</div>
+    <div class="brand">
+        <div class="brand-icon">♫</div>
 
-            <div>
-                <h1>Song Book</h1>
-                <p>Chords & Lyrics</p>
-            </div>
+        <div>
+            <h1>Song Book</h1>
+            <p>Chords & Lyrics</p>
         </div>
+    </div>
 
-        <div class="online-status" id="status">
-            ● Offline Ready
-        </div>
+    <div class="online-status" id="status">
+        ● Offline Ready
+    </div>
 
-    </header>
-
-
-    <main class="container">
-
-        <div class="tabs">
-
-            <button
-                id="chordsBtn"
-                class="tab active"
-            >
-                🎸 Chords
-            </button>
-
-            <button
-                id="lyricsBtn"
-                class="tab"
-            >
-                🎤 Lyrics
-            </button>
-
-        </div>
+</header>
 
 
-        <!-- CHORDS -->
+<main class="container">
 
-        <section id="chordsSection">
+    <div class="tabs">
 
-            <div class="section-title">
+        <button id="chordsBtn" class="tab active">
+            🎸 Chords
+        </button>
 
-                <div>
-                    <small>YOUR MUSIC LIBRARY</small>
-                    <h2>Chord Sheets</h2>
-                </div>
-
-                <span id="chordCount">
-                    0
-                </span>
-
-            </div>
-
-
-            <div class="search">
-
-                <span>⌕</span>
-
-                <input
-                    id="chordSearch"
-                    type="search"
-                    placeholder="Search songs..."
-                    autocomplete="off"
-                >
-
-            </div>
-
-
-            <div
-                id="chordList"
-                class="song-list"
-            ></div>
-
-        </section>
-
-
-        <!-- LYRICS -->
-
-        <section
-            id="lyricsSection"
-            class="hidden"
-        >
-
-            <div class="section-title">
-
-                <div>
-                    <small>YOUR MUSIC LIBRARY</small>
-                    <h2>Lyrics</h2>
-                </div>
-
-                <span id="lyricCount">
-                    0
-                </span>
-
-            </div>
-
-
-            <div class="search">
-
-                <span>⌕</span>
-
-                <input
-                    id="lyricSearch"
-                    type="search"
-                    placeholder="Search songs..."
-                    autocomplete="off"
-                >
-
-            </div>
-
-
-            <div
-                id="lyricList"
-                class="song-list"
-            ></div>
-
-        </section>
-
-    </main>
-
-
-    <footer>
-
-        <div class="footer-note">
-            ♫ Made for musicians
-        </div>
-
-        <small>
-            Band Song Book © 2026
-        </small>
-
-    </footer>
-
-
-    <!-- IMAGE VIEWER -->
-
-    <div
-        id="viewer"
-        class="viewer hidden"
-    >
-
-        <div class="viewer-bar">
-
-            <div
-                id="viewerTitle"
-                class="viewer-title"
-            >
-                Song
-            </div>
-
-            <button
-                id="closeViewer"
-                class="close"
-            >
-                ×
-            </button>
-
-        </div>
-
-
-        <div class="viewer-body">
-
-            <img
-                id="viewerImage"
-                src=""
-                alt="Chord sheet"
-            >
-
-        </div>
+        <button id="lyricsBtn" class="tab">
+            🎤 Lyrics
+        </button>
 
     </div>
 
 
-    <script src="app.js"></script>
+    <!-- CHORDS -->
+
+    <section id="chordsSection">
+
+        <div class="section-title">
+
+            <div>
+                <small>YOUR MUSIC LIBRARY</small>
+                <h2>Chord Sheets</h2>
+            </div>
+
+            <span id="chordCount">0</span>
+
+        </div>
+
+        <div class="search">
+
+            <span>⌕</span>
+
+            <input
+                id="chordSearch"
+                type="search"
+                placeholder="Search songs..."
+                autocomplete="off"
+            >
+
+        </div>
+
+        <div id="chordList" class="song-list"></div>
+
+    </section>
+
+
+    <!-- LYRICS -->
+
+    <section id="lyricsSection" class="hidden">
+
+        <div class="section-title">
+
+            <div>
+                <small>YOUR MUSIC LIBRARY</small>
+                <h2>Lyrics</h2>
+            </div>
+
+            <span id="lyricCount">0</span>
+
+        </div>
+
+        <div class="search">
+
+            <span>⌕</span>
+
+            <input
+                id="lyricSearch"
+                type="search"
+                placeholder="Search songs..."
+                autocomplete="off"
+            >
+
+        </div>
+
+        <div id="lyricList" class="song-list"></div>
+
+    </section>
+
+</main>
+
+
+<footer>
+
+    <div class="footer-note">
+        ♫ Made for musicians
+    </div>
+
+    <small>
+        Band Song Book © 2026
+    </small>
+
+</footer>
+
+
+<!-- FULL SCREEN IMAGE VIEWER -->
+
+<div id="viewer" class="viewer hidden">
+
+    <div class="viewer-bar">
+
+        <div id="viewerTitle" class="viewer-title">
+            Song
+        </div>
+
+        <button id="closeViewer" class="close">
+            ×
+        </button>
+
+    </div>
+
+    <div class="viewer-body">
+
+        <img
+            id="viewerImage"
+            src=""
+            alt="Song sheet"
+        >
+
+    </div>
+
+</div>
+
+
+<script src="app.js"></script>
 
 </body>
 </html>
