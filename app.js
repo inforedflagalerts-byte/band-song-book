@@ -1,114 +1,240 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+```javascript
+// ===============================
+// SONG DATABASE
+// ===============================
 
-import {
-  getFirestore,
-  collection,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+const chords = [
+    {
+        name: "Adare Kiya",
+        image: "chords/adare-kiya.jpg"
+    },
 
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBZlnbDkfu0ucO5h6tscWsLhKO2v7DUNuc",
-  authDomain: "band-song-book.firebaseapp.com",
-  projectId: "band-song-book",
-  storageBucket: "band-song-book.firebasestorage.app",
-  messagingSenderId: "523471759825",
-  appId: "1:523471759825:web:6f6ae48a632b1bdd6e18f0"
-};
-
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+    {
+        name: "Sanda Eliya",
+        image: "chords/sanda-eliya.jpg"
+    }
+];
 
 
-const songList = document.getElementById("songList");
-const searchInput = document.getElementById("searchInput");
+const lyrics = [
+    {
+        name: "Adare Kiya",
+        file: "lyrics/adare-kiya.txt"
+    },
 
-let songs = [];
+    {
+        name: "Sanda Eliya",
+        file: "lyrics/sanda-eliya.txt"
+    }
+];
 
 
-async function loadSongs() {
+// ===============================
+// SCREEN CONTROL
+// ===============================
 
-  try {
+function hideAllScreens() {
 
-    const snapshot = await getDocs(collection(db, "songs"));
+    document.querySelectorAll(".screen").forEach(screen => {
+        screen.classList.remove("active");
+    });
 
-    songs = [];
+}
 
-    snapshot.forEach((doc) => {
 
-      songs.push({
-        id: doc.id,
-        ...doc.data()
-      });
+function openSection(section) {
+
+    hideAllScreens();
+
+    document.getElementById(section).classList.add("active");
+
+    if (section === "chords") {
+        displayChords(chords);
+    }
+
+    if (section === "lyrics") {
+        displayLyrics(lyrics);
+    }
+}
+
+
+function goHome() {
+
+    hideAllScreens();
+
+    document.getElementById("home").classList.add("active");
+
+}
+
+
+// ===============================
+// CHORDS
+// ===============================
+
+function displayChords(list) {
+
+    const container = document.getElementById("chordList");
+
+    container.innerHTML = "";
+
+    if (list.length === 0) {
+
+        container.innerHTML =
+            `<p style="color:#777;text-align:center;">
+                No songs found
+            </p>`;
+
+        return;
+    }
+
+
+    list.forEach(song => {
+
+        const item = document.createElement("div");
+
+        item.className = "song-item";
+
+        item.innerHTML = `
+            🎸 <strong>${song.name}</strong>
+        `;
+
+        item.onclick = function () {
+            openChord(song);
+        };
+
+        container.appendChild(item);
 
     });
 
-    displaySongs(songs);
+}
 
-  } catch (error) {
 
-    console.error(error);
+function searchChords() {
 
-    songList.innerHTML =
-      "<p>❌ Songs load කරන්න බැරි වුණා.</p>";
+    const search =
+        document.getElementById("chordSearch")
+        .value
+        .toLowerCase();
 
-  }
+    const filtered = chords.filter(song =>
+        song.name.toLowerCase().includes(search)
+    );
+
+    displayChords(filtered);
 
 }
 
 
-function displaySongs(list) {
+function openChord(song) {
 
-  if (list.length === 0) {
+    hideAllScreens();
 
-    songList.innerHTML =
-      "<p>🎵 තාම Songs නැහැ.</p>";
+    document.getElementById("chordViewer")
+        .classList.add("active");
 
-    return;
-  }
+    document.getElementById("chordTitle")
+        .textContent = song.name;
 
-
-  songList.innerHTML = "";
-
-
-  list.forEach((song) => {
-
-    const div = document.createElement("div");
-
-    div.className = "song";
-
-
-    div.innerHTML = `
-      <h2>🎵 ${song.name || "Unnamed Song"}</h2>
-    `;
-
-
-    songList.appendChild(div);
-
-  });
+    document.getElementById("chordImage")
+        .src = song.image;
 
 }
 
 
-searchInput.addEventListener("input", () => {
+// ===============================
+// LYRICS
+// ===============================
 
-  const text =
-    searchInput.value.toLowerCase();
+function displayLyrics(list) {
 
+    const container = document.getElementById("lyricsList");
 
-  const filtered = songs.filter(song =>
-
-    (song.name || "")
-      .toLowerCase()
-      .includes(text)
-
-  );
+    container.innerHTML = "";
 
 
-  displaySongs(filtered);
+    if (list.length === 0) {
 
-});
+        container.innerHTML =
+            `<p style="color:#777;text-align:center;">
+                No songs found
+            </p>`;
+
+        return;
+    }
 
 
-loadSongs();
+    list.forEach(song => {
+
+        const item = document.createElement("div");
+
+        item.className = "song-item";
+
+        item.innerHTML = `
+            🎤 <strong>${song.name}</strong>
+        `;
+
+        item.onclick = function () {
+            openLyrics(song);
+        };
+
+        container.appendChild(item);
+
+    });
+
+}
+
+
+function searchLyrics() {
+
+    const search =
+        document.getElementById("lyricsSearch")
+        .value
+        .toLowerCase();
+
+    const filtered = lyrics.filter(song =>
+        song.name.toLowerCase().includes(search)
+    );
+
+    displayLyrics(filtered);
+
+}
+
+
+async function openLyrics(song) {
+
+    hideAllScreens();
+
+    document.getElementById("lyricsViewer")
+        .classList.add("active");
+
+    document.getElementById("lyricsTitle")
+        .textContent = song.name;
+
+
+    const lyricsBox =
+        document.getElementById("lyricsText");
+
+    lyricsBox.textContent = "Loading...";
+
+
+    try {
+
+        const response = await fetch(song.file);
+
+        if (!response.ok) {
+            throw new Error("File not found");
+        }
+
+        const text = await response.text();
+
+        lyricsBox.textContent = text;
+
+    } catch (error) {
+
+        lyricsBox.textContent =
+            "Lyrics could not be loaded.";
+
+    }
+
+}
+```
