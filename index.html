@@ -1,33 +1,127 @@
+```html
 <!DOCTYPE html>
-<html lang="si">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Band Song Book</title>
+    <title>Song Chords & Lyrics</title>
 
-  <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-  <header>
-    <h1>🎵 Band Song Book</h1>
+    <header>
+        <h1>🎵 Song Book</h1>
+        <p>Chords & Lyrics</p>
+    </header>
 
-    <input
-      type="search"
-      id="searchInput"
-      placeholder="🔍 සින්දුවේ නම Search කරන්න..."
-    >
-  </header>
+    <main>
 
-  <main>
-    <div id="songList">
-      <p>Songs loading...</p>
-    </div>
-  </main>
+        <!-- HOME -->
+        <section id="home" class="screen active">
 
-  <script type="module" src="app.js"></script>
+            <button class="main-button chord-button"
+                    onclick="openSection('chords')">
+                🎸 CHORDS
+            </button>
+
+            <button class="main-button lyrics-button"
+                    onclick="openSection('lyrics')">
+                🎤 LYRICS
+            </button>
+
+        </section>
+
+
+        <!-- CHORDS -->
+        <section id="chords" class="screen">
+
+            <div class="top-bar">
+                <button class="back-button" onclick="goHome()">←</button>
+                <h2>🎸 Chords</h2>
+            </div>
+
+            <input
+                type="text"
+                id="chordSearch"
+                class="search"
+                placeholder="Search chords..."
+                oninput="searchChords()"
+            >
+
+            <div id="chordList" class="song-list"></div>
+
+        </section>
+
+
+        <!-- LYRICS -->
+        <section id="lyrics" class="screen">
+
+            <div class="top-bar">
+                <button class="back-button" onclick="goHome()">←</button>
+                <h2>🎤 Lyrics</h2>
+            </div>
+
+            <input
+                type="text"
+                id="lyricsSearch"
+                class="search"
+                placeholder="Search lyrics..."
+                oninput="searchLyrics()"
+            >
+
+            <div id="lyricsList" class="song-list"></div>
+
+        </section>
+
+
+        <!-- CHORD VIEWER -->
+        <section id="chordViewer" class="screen">
+
+            <div class="top-bar">
+                <button class="back-button"
+                        onclick="openSection('chords')">
+                    ←
+                </button>
+
+                <h2 id="chordTitle"></h2>
+            </div>
+
+            <div class="image-container">
+                <img id="chordImage" src="" alt="Chord">
+            </div>
+
+        </section>
+
+
+        <!-- LYRICS VIEWER -->
+        <section id="lyricsViewer" class="screen">
+
+            <div class="top-bar">
+                <button class="back-button"
+                        onclick="openSection('lyrics')">
+                    ←
+                </button>
+
+                <h2 id="lyricsTitle"></h2>
+            </div>
+
+            <div id="lyricsText" class="lyrics-content"></div>
+
+        </section>
+
+    </main>
+
+
+    <footer>
+        <p>© 2026 Song Book</p>
+    </footer>
+
+
+    <script src="app.js"></script>
 
 </body>
 </html>
+```
