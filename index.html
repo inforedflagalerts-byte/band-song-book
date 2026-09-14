@@ -3,207 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#08080d">
 
-    <title>Band Song Book 🎵</title>
+    <meta name="description" content="Band Song Book - Chords and Lyrics">
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+
+    <title>Band Song Book</title>
 </head>
 
 <body>
 
-    <!-- Background music decoration -->
-    <div class="music-bg">
-        <span>♪</span>
-        <span>♫</span>
-        <span>♩</span>
-        <span>♬</span>
-        <span>♪</span>
-        <span>♫</span>
-    </div>
+    <header class="topbar">
 
+        <div class="brand">
+            <div class="brand-icon">♫</div>
 
-    <!-- HEADER -->
-
-    <header class="hero">
-
-        <div class="music-logo">
-            🎵
+            <div>
+                <h1>Song Book</h1>
+                <p>Chords & Lyrics</p>
+            </div>
         </div>
 
-        <p class="small-title">
-            BAND MUSIC LIBRARY
-        </p>
-
-        <h1>
-            Song <span>Book</span>
-        </h1>
-
-        <p class="subtitle">
-            Chords & Lyrics — Everything your band needs.
-        </p>
+        <div class="online-status" id="status">
+            ● Offline Ready
+        </div>
 
     </header>
 
 
-    <!-- MAIN -->
-
     <main class="container">
-
-
-        <!-- BUTTONS -->
 
         <div class="tabs">
 
             <button
                 id="chordsBtn"
-                class="tab-btn active"
+                class="tab active"
             >
-                <span>🎸</span>
-                CHORDS
+                🎸 Chords
             </button>
-
 
             <button
                 id="lyricsBtn"
-                class="tab-btn"
+                class="tab"
             >
-                <span>🎤</span>
-                LYRICS
+                🎤 Lyrics
             </button>
 
         </div>
 
 
-        <!-- CHORD SECTION -->
+        <!-- CHORDS -->
 
-        <section
-            id="chordsSection"
-            class="section"
-        >
+        <section id="chordsSection">
 
-            <div class="section-header">
+            <div class="section-title">
 
                 <div>
-
-                    <p class="section-label">
-                        GUITAR • BAND • MUSIC
-                    </p>
-
-                    <h2>
-                        Chord Library
-                    </h2>
-
+                    <small>YOUR MUSIC LIBRARY</small>
+                    <h2>Chord Sheets</h2>
                 </div>
 
-                <div class="music-symbol">
-                    ♫
-                </div>
+                <span id="chordCount">
+                    0
+                </span>
 
             </div>
 
 
-            <!-- SEARCH -->
-
-            <div class="search-box">
+            <div class="search">
 
                 <span>⌕</span>
 
                 <input
                     id="chordSearch"
-                    type="text"
-                    placeholder="Search chord songs..."
+                    type="search"
+                    placeholder="Search songs..."
                     autocomplete="off"
                 >
 
             </div>
 
 
-            <!-- SONGS -->
-
             <div
                 id="chordList"
-                class="song-grid"
-            >
-
-            </div>
+                class="song-list"
+            ></div>
 
         </section>
 
 
-
-        <!-- LYRICS SECTION -->
+        <!-- LYRICS -->
 
         <section
             id="lyricsSection"
-            class="section hidden"
+            class="hidden"
         >
 
-            <div class="section-header">
+            <div class="section-title">
 
                 <div>
-
-                    <p class="section-label">
-                        VOCALS • WORDS • MUSIC
-                    </p>
-
-                    <h2>
-                        Lyrics Library
-                    </h2>
-
+                    <small>YOUR MUSIC LIBRARY</small>
+                    <h2>Lyrics</h2>
                 </div>
 
-                <div class="music-symbol">
-                    ♪
-                </div>
+                <span id="lyricCount">
+                    0
+                </span>
 
             </div>
 
 
-            <!-- SEARCH -->
-
-            <div class="search-box">
+            <div class="search">
 
                 <span>⌕</span>
 
                 <input
                     id="lyricSearch"
-                    type="text"
-                    placeholder="Search lyrics..."
+                    type="search"
+                    placeholder="Search songs..."
                     autocomplete="off"
                 >
 
             </div>
 
 
-            <!-- LYRICS -->
-
             <div
                 id="lyricList"
-                class="song-grid"
-            >
-
-            </div>
+                class="song-list"
+            ></div>
 
         </section>
 
     </main>
 
 
-    <!-- FOOTER -->
-
     <footer>
 
-        <div class="footer-line"></div>
-
-        <p>
-            🎵 BAND SONG BOOK
-        </p>
+        <div class="footer-note">
+            ♫ Made for musicians
+        </div>
 
         <small>
-            Your music. Your songs. Your band.
+            Band Song Book © 2026
         </small>
 
     </footer>
+
+
+    <!-- IMAGE VIEWER -->
+
+    <div
+        id="viewer"
+        class="viewer hidden"
+    >
+
+        <div class="viewer-bar">
+
+            <div
+                id="viewerTitle"
+                class="viewer-title"
+            >
+                Song
+            </div>
+
+            <button
+                id="closeViewer"
+                class="close"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="viewer-body">
+
+            <img
+                id="viewerImage"
+                src=""
+                alt="Chord sheet"
+            >
+
+        </div>
+
+    </div>
 
 
     <script src="app.js"></script>
