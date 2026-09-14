@@ -1,4 +1,3 @@
-```css
 * {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
@@ -499,12 +498,6 @@ body {
     user-select: none;
 
     -webkit-user-drag: none;
-
-    /* PINCH ZOOM */
-
-    touch-action: none;
-
-    will-change: transform;
 }
 
 
@@ -567,4 +560,3 @@ footer {
     }
 
 }
-```
