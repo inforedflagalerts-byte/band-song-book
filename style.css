@@ -1,53 +1,173 @@
+```css
 * {
-  box-sizing: border-box;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
 }
 
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f2f2f2;
-  color: #222;
+    font-family: Arial, sans-serif;
+    background: #0b0b0f;
+    color: white;
+    min-height: 100vh;
 }
 
 header {
-  background: #111;
-  color: white;
-  padding: 20px;
-  text-align: center;
+    text-align: center;
+    padding: 35px 20px 25px;
 }
 
 header h1 {
-  margin: 0 0 15px;
+    font-size: 28px;
 }
 
-#searchInput {
-  width: 100%;
-  max-width: 600px;
-  padding: 14px;
-  border: none;
-  border-radius: 10px;
-  font-size: 16px;
+header p {
+    color: #999;
+    margin-top: 7px;
 }
 
 main {
-  padding: 20px;
-  max-width: 900px;
-  margin: auto;
+    width: 100%;
+    max-width: 650px;
+    margin: auto;
+    padding: 20px;
 }
 
-.song {
-  background: white;
-  padding: 18px;
-  margin-bottom: 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.screen {
+    display: none;
 }
 
-.song:hover {
-  transform: scale(1.01);
+.screen.active {
+    display: block;
 }
 
-.song h2 {
-  margin: 0;
+.main-button {
+    width: 100%;
+    height: 110px;
+    border: none;
+    border-radius: 18px;
+    margin-bottom: 20px;
+    color: white;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
 }
+
+.main-button:active {
+    transform: scale(0.97);
+}
+
+.chord-button {
+    background: linear-gradient(135deg, #6b21a8, #3b0764);
+}
+
+.lyrics-button {
+    background: linear-gradient(135deg, #b45309, #78350f);
+}
+
+.top-bar {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.top-bar h2 {
+    font-size: 23px;
+}
+
+.back-button {
+    width: 42px;
+    height: 42px;
+    border: none;
+    border-radius: 50%;
+    background: #222228;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.search {
+    width: 100%;
+    padding: 16px;
+    border: 1px solid #303039;
+    border-radius: 12px;
+    background: #15151b;
+    color: white;
+    font-size: 16px;
+    outline: none;
+    margin-bottom: 18px;
+}
+
+.search:focus {
+    border-color: #777;
+}
+
+.song-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.song-item {
+    padding: 18px;
+    background: #15151b;
+    border: 1px solid #25252d;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.song-item:hover {
+    background: #202027;
+}
+
+.song-item strong {
+    font-size: 17px;
+}
+
+.image-container {
+    width: 100%;
+    text-align: center;
+}
+
+.image-container img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 10px;
+}
+
+.lyrics-content {
+    background: #15151b;
+    border-radius: 12px;
+    padding: 20px;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    font-size: 17px;
+    overflow-wrap: break-word;
+}
+
+footer {
+    text-align: center;
+    padding: 30px;
+    color: #666;
+    font-size: 13px;
+}
+
+@media (max-width: 500px) {
+
+    header h1 {
+        font-size: 24px;
+    }
+
+    .main-button {
+        height: 95px;
+        font-size: 19px;
+    }
+
+    main {
+        padding: 15px;
+    }
+}
+```
