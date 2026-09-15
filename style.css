@@ -11,104 +11,128 @@ body {
 }
 
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-        Roboto, Arial, sans-serif;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Arial,
+        sans-serif;
 
     background:
         radial-gradient(
-            circle at top left,
-            rgba(155, 89, 182, 0.18),
-            transparent 35%
+            circle at 15% 0%,
+            rgba(145, 75, 190, 0.18),
+            transparent 32%
         ),
         radial-gradient(
-            circle at bottom right,
-            rgba(90, 60, 150, 0.16),
+            circle at 90% 100%,
+            rgba(92, 45, 140, 0.16),
             transparent 35%
         ),
-        #100c16;
+        #0d0913;
 
-    color: #f7f1fa;
+    color: #f6eef9;
 
-    overflow: hidden;
-}
-
-
-/* =========================
-   MAIN APP
-========================= */
-
-.app {
-    width: 100%;
+    /*
+     * IMPORTANT:
+     * Entire page does NOT scroll.
+     * Only the song list scrolls.
+     */
     height: 100vh;
-
-    display: flex;
-    flex-direction: column;
-
     overflow: hidden;
+
+    -webkit-font-smoothing: antialiased;
 }
 
 
-/* =========================
+/* ==================================================
    TOP BAR
-========================= */
+================================================== */
 
 .topbar {
-    flex: 0 0 auto;
-
     width: 100%;
+    height: 88px;
 
-    padding: 16px 22px;
+    flex: 0 0 88px;
 
     display: flex;
     align-items: center;
     justify-content: space-between;
 
-    background: rgba(25, 18, 32, 0.82);
+    padding: 14px 24px;
 
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
+    background: rgba(22, 15, 29, 0.92);
 
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 
     position: relative;
-    z-index: 20;
+    z-index: 50;
+
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
 }
 
 .brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+
+    gap: 11px;
 }
 
 .brand-icon {
-    font-size: 25px;
+    font-size: 28px;
+
+    color: #ead8f2;
+
+    line-height: 1;
 }
 
-.brand-title {
-    font-size: 20px;
-    font-weight: 700;
+.brand h1 {
+    font-size: 28px;
+    line-height: 1.05;
 
-    letter-spacing: 0.2px;
+    font-weight: 800;
+
+    letter-spacing: -0.5px;
+
+    color: #f8effb;
 }
 
-.status {
+.brand p {
+    margin-top: 3px;
+
     font-size: 13px;
+
+    color: #b9a9bd;
+}
+
+.online-status {
+    font-size: 13px;
+
     font-weight: 600;
 
     white-space: nowrap;
+
+    color: #8ed89b;
 }
 
 
-/* =========================
-   CONTENT AREA
-========================= */
+/* ==================================================
+   MAIN CONTAINER
+================================================== */
 
-.content {
-    flex: 1 1 auto;
+.container {
+    width: 100%;
+
+    /*
+     * Header = 88px
+     * Footer = 42px
+     * Container gets everything between them.
+     */
+    height: calc(100vh - 130px);
 
     min-height: 0;
-
-    width: 100%;
 
     display: flex;
     flex-direction: column;
@@ -117,42 +141,46 @@ body {
 }
 
 
-/* =========================
+/* ==================================================
    TABS
-========================= */
+   FIXED AT TOP OF CONTENT
+================================================== */
 
 .tabs {
+    width: 100%;
+
     flex: 0 0 auto;
 
     display: flex;
 
     gap: 8px;
 
-    padding: 14px 18px 10px;
+    padding: 14px 20px 10px;
 
-    background: rgba(16, 12, 22, 0.92);
-
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(13, 9, 19, 0.96);
 
     position: relative;
-    z-index: 15;
+    z-index: 40;
+
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
 }
 
-.tab-btn {
-    flex: 1;
-
+.tab {
     border: 1px solid rgba(255, 255, 255, 0.08);
 
-    background: rgba(255, 255, 255, 0.035);
+    background: rgba(255, 255, 255, 0.045);
 
-    color: #bfb5c7;
+    color: #afa3b4;
 
-    padding: 12px 15px;
+    min-width: 125px;
 
-    border-radius: 13px;
+    padding: 11px 18px;
+
+    border-radius: 12px;
 
     font-size: 14px;
+
     font-weight: 700;
 
     cursor: pointer;
@@ -160,39 +188,47 @@ body {
     transition:
         background 0.2s ease,
         color 0.2s ease,
-        transform 0.2s ease;
+        border-color 0.2s ease,
+        transform 0.15s ease;
+
+    -webkit-tap-highlight-color: transparent;
 }
 
-.tab-btn:hover {
-    background: rgba(255, 255, 255, 0.07);
+.tab:hover {
+    background: rgba(174, 106, 214, 0.12);
+
+    color: #eee2f3;
+
+    border-color: rgba(184, 119, 220, 0.25);
 }
 
-.tab-btn:active {
-    transform: scale(0.98);
+.tab:active {
+    transform: scale(0.97);
 }
 
-.tab-btn.active {
+.tab.active {
+    color: #ffffff;
+
     background:
         linear-gradient(
             135deg,
-            rgba(164, 95, 210, 0.32),
-            rgba(111, 69, 155, 0.28)
+            rgba(166, 92, 213, 0.28),
+            rgba(104, 59, 145, 0.24)
         );
 
-    color: #ffffff;
-
-    border-color: rgba(190, 125, 230, 0.35);
+    border-color: rgba(190, 124, 228, 0.34);
 
     box-shadow:
-        0 5px 20px rgba(100, 50, 130, 0.18);
+        0 5px 22px rgba(104, 53, 139, 0.18);
 }
 
 
-/* =========================
+/* ==================================================
    SECTIONS
-========================= */
+================================================== */
 
-.section {
+#chordsSection,
+#lyricsSection {
     flex: 1 1 auto;
 
     min-height: 0;
@@ -203,106 +239,168 @@ body {
     overflow: hidden;
 }
 
-.section.hidden {
-    display: none;
+.hidden {
+    display: none !important;
 }
 
 
-/* =========================
-   SECTION HEADER
-========================= */
+/* ==================================================
+   SECTION TITLE
+   DOES NOT SCROLL
+================================================== */
 
-.section-header {
+.section-title {
+    width: 100%;
+
     flex: 0 0 auto;
-
-    padding: 8px 18px 10px;
 
     display: flex;
     align-items: center;
     justify-content: space-between;
 
+    padding: 7px 20px 9px;
+
     position: relative;
-    z-index: 10;
+    z-index: 30;
 }
 
-.section-title {
-    font-size: 17px;
-    font-weight: 750;
+.section-title small {
+    display: block;
+
+    margin-bottom: 3px;
+
+    color: #a895ad;
+
+    font-size: 10px;
+
+    font-weight: 800;
+
+    letter-spacing: 0.8px;
 }
 
-.section-count {
-    min-width: 30px;
+.section-title h2 {
+    font-size: 23px;
 
-    padding: 5px 9px;
+    line-height: 1.15;
+
+    font-weight: 800;
+
+    letter-spacing: -0.3px;
+
+    color: #f5edf8;
+}
+
+.section-title > span {
+    min-width: 34px;
+    height: 28px;
+
+    padding: 0 9px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     border-radius: 999px;
 
-    background: rgba(171, 105, 211, 0.14);
+    background:
+        rgba(169, 101, 211, 0.14);
 
-    color: #d8b6e9;
+    border: 1px solid rgba(182, 113, 220, 0.18);
+
+    color: #d8b7e6;
 
     font-size: 12px;
-    font-weight: 700;
 
-    text-align: center;
+    font-weight: 800;
 }
 
 
-/* =========================
+/* ==================================================
    SEARCH
-========================= */
+   DOES NOT SCROLL
+================================================== */
 
-.search-box {
-    flex: 0 0 auto;
-
-    padding: 0 18px 12px;
-
-    position: relative;
-
-    z-index: 10;
-}
-
-.search-box input {
+.search {
     width: 100%;
 
-    height: 44px;
+    flex: 0 0 auto;
 
-    padding: 0 15px;
+    padding: 0 20px 11px;
 
-    border-radius: 13px;
+    display: flex;
+    align-items: center;
 
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    position: relative;
+    z-index: 30;
+}
+
+.search > span {
+    position: absolute;
+
+    left: 34px;
+
+    color: #9b8aa1;
+
+    font-size: 20px;
+
+    pointer-events: none;
+
+    z-index: 2;
+}
+
+.search input {
+    width: 100%;
+
+    height: 43px;
+
+    padding: 0 14px 0 39px;
+
+    border-radius: 12px;
+
+    border: 1px solid rgba(255, 255, 255, 0.075);
 
     outline: none;
 
-    background: rgba(255, 255, 255, 0.045);
+    background:
+        rgba(255, 255, 255, 0.045);
 
     color: #ffffff;
 
-    font-size: 14px;
+    font-size: 13px;
 
     transition:
         border-color 0.2s ease,
-        background 0.2s ease;
+        background 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
-.search-box input::placeholder {
-    color: #8f8498;
+.search input::placeholder {
+    color: #8e8194;
 }
 
-.search-box input:focus {
-    border-color: rgba(185, 120, 225, 0.45);
+.search input:focus {
+    background:
+        rgba(255, 255, 255, 0.065);
 
-    background: rgba(255, 255, 255, 0.065);
+    border-color:
+        rgba(184, 119, 225, 0.42);
+
+    box-shadow:
+        0 0 0 3px rgba(164, 94, 207, 0.07);
 }
 
 
-/* =========================
+/* ==================================================
    SONG LIST
-   ONLY THIS AREA SCROLLS
-========================= */
+   ⭐ ONLY THIS PART SCROLLS
+================================================== */
 
 .song-list {
+    width: 100%;
+
+    /*
+     * This is the important part.
+     */
     flex: 1 1 auto;
 
     min-height: 0;
@@ -310,21 +408,31 @@ body {
     overflow-y: auto;
     overflow-x: hidden;
 
-    padding: 2px 18px 30px;
+    padding:
+        0 20px 25px;
 
+    /*
+     * Prevent scroll from moving the page.
+     */
     overscroll-behavior: contain;
 
     -webkit-overflow-scrolling: touch;
 
+    /*
+     * Firefox scrollbar.
+     */
     scrollbar-width: thin;
-    scrollbar-color: rgba(180, 115, 220, 0.35) transparent;
+
+    scrollbar-color:
+        rgba(172, 106, 214, 0.35)
+        transparent;
 }
 
 
-/* Chrome / Edge / Safari */
+/* Chrome / Edge / Opera / Safari */
 
 .song-list::-webkit-scrollbar {
-    width: 6px;
+    width: 7px;
 }
 
 .song-list::-webkit-scrollbar-track {
@@ -332,19 +440,21 @@ body {
 }
 
 .song-list::-webkit-scrollbar-thumb {
-    background: rgba(180, 115, 220, 0.32);
+    background:
+        rgba(174, 108, 216, 0.32);
 
     border-radius: 999px;
 }
 
 .song-list::-webkit-scrollbar-thumb:hover {
-    background: rgba(190, 125, 230, 0.5);
+    background:
+        rgba(187, 122, 226, 0.48);
 }
 
 
-/* =========================
+/* ==================================================
    SONG ITEM
-========================= */
+================================================== */
 
 .song-item {
     width: 100%;
@@ -353,7 +463,7 @@ body {
 
     margin-bottom: 9px;
 
-    padding: 12px 14px;
+    padding: 11px 14px;
 
     display: flex;
     align-items: center;
@@ -369,31 +479,37 @@ body {
             rgba(255, 255, 255, 0.025)
         );
 
-    border: 1px solid rgba(255, 255, 255, 0.065);
+    border: 1px solid
+        rgba(255, 255, 255, 0.065);
 
     cursor: pointer;
-
-    transition:
-        transform 0.18s ease,
-        background 0.18s ease,
-        border-color 0.18s ease;
 
     user-select: none;
 
     -webkit-tap-highlight-color: transparent;
+
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
 }
 
 .song-item:hover {
     background:
         linear-gradient(
             135deg,
-            rgba(170, 100, 220, 0.13),
+            rgba(168, 94, 214, 0.13),
             rgba(255, 255, 255, 0.04)
         );
 
-    border-color: rgba(190, 125, 230, 0.22);
+    border-color:
+        rgba(188, 123, 225, 0.24);
 
     transform: translateY(-1px);
+
+    box-shadow:
+        0 7px 24px rgba(71, 35, 91, 0.15);
 }
 
 .song-item:active {
@@ -401,9 +517,9 @@ body {
 }
 
 
-/* =========================
+/* ==================================================
    SONG ICON
-========================= */
+================================================== */
 
 .song-icon {
     width: 42px;
@@ -420,17 +536,20 @@ body {
     background:
         linear-gradient(
             135deg,
-            rgba(172, 105, 214, 0.2),
-            rgba(92, 60, 130, 0.18)
+            rgba(169, 96, 215, 0.20),
+            rgba(95, 55, 131, 0.20)
         );
+
+    border: 1px solid
+        rgba(191, 125, 226, 0.10);
 
     font-size: 20px;
 }
 
 
-/* =========================
+/* ==================================================
    SONG DETAILS
-========================= */
+================================================== */
 
 .song-details {
     flex: 1;
@@ -439,10 +558,13 @@ body {
 }
 
 .song-name {
-    color: #f5edf8;
+    width: 100%;
+
+    color: #f4ebf7;
 
     font-size: 14px;
-    font-weight: 650;
+
+    font-weight: 700;
 
     line-height: 1.35;
 
@@ -456,33 +578,34 @@ body {
 .song-type {
     margin-top: 4px;
 
-    color: #8f8498;
+    color: #94879a;
 
     font-size: 11px;
 
-    line-height: 1.3;
+    line-height: 1.2;
 }
 
 
-/* =========================
-   ARROW
-========================= */
+/* ==================================================
+   SONG ARROW
+================================================== */
 
 .song-arrow {
     flex: 0 0 auto;
 
-    color: #8f789b;
+    color: #8e7898;
 
-    font-size: 25px;
+    font-size: 24px;
+
     font-weight: 300;
 
     line-height: 1;
 }
 
 
-/* =========================
-   EMPTY / LOADING
-========================= */
+/* ==================================================
+   EMPTY STATE
+================================================== */
 
 .empty {
     width: 100%;
@@ -497,9 +620,9 @@ body {
 
     text-align: center;
 
-    color: #8f8498;
+    color: #8e8293;
 
-    font-size: 14px;
+    font-size: 13px;
 
     gap: 8px;
 }
@@ -511,11 +634,51 @@ body {
 }
 
 
-/* =========================
-   VIEWER
-========================= */
+/* ==================================================
+   FOOTER
+================================================== */
 
-#viewer {
+footer {
+    width: 100%;
+
+    height: 42px;
+
+    flex: 0 0 42px;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 20px;
+
+    background:
+        rgba(18, 12, 24, 0.94);
+
+    border-top:
+        1px solid rgba(255, 255, 255, 0.06);
+
+    color: #887b8d;
+
+    font-size: 11px;
+
+    position: relative;
+    z-index: 50;
+}
+
+.footer-note {
+    color: #9c8da1;
+}
+
+footer small {
+    font-size: 10px;
+}
+
+
+/* ==================================================
+   FULL SCREEN VIEWER
+================================================== */
+
+.viewer {
     position: fixed;
 
     inset: 0;
@@ -528,105 +691,122 @@ body {
     background:
         radial-gradient(
             circle at top,
-            rgba(125, 65, 160, 0.15),
+            rgba(125, 64, 165, 0.17),
             transparent 45%
         ),
-        rgba(8, 6, 11, 0.97);
+        rgba(7, 5, 10, 0.98);
 
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
-#viewer.hidden {
-    display: none;
+.viewer.hidden {
+    display: none !important;
 }
 
 
-/* =========================
-   VIEWER HEADER
-========================= */
+/* ==================================================
+   VIEWER BAR
+================================================== */
 
-.viewer-header {
-    flex: 0 0 auto;
+.viewer-bar {
+    width: 100%;
 
     min-height: 64px;
 
-    padding: 10px 14px;
+    flex: 0 0 auto;
 
     display: flex;
     align-items: center;
+    justify-content: space-between;
 
-    gap: 12px;
+    padding: 9px 14px;
 
-    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    background:
+        rgba(19, 13, 24, 0.90);
 
-    background: rgba(20, 15, 25, 0.85);
+    border-bottom:
+        1px solid rgba(255, 255, 255, 0.07);
 
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
 }
 
 .viewer-title {
-    flex: 1;
-
-    min-width: 0;
+    color: #ffffff;
 
     font-size: 15px;
-    font-weight: 700;
 
-    color: #ffffff;
+    font-weight: 750;
 
     overflow: hidden;
 
-    white-space: nowrap;
-
     text-overflow: ellipsis;
+
+    white-space: nowrap;
 }
 
-#closeViewer {
+.viewer-status {
+    margin-top: 3px;
+
+    color: #9c8fa1;
+
+    font-size: 10px;
+}
+
+.close {
     width: 40px;
     height: 40px;
 
     flex: 0 0 40px;
 
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid
+        rgba(255, 255, 255, 0.09);
 
     border-radius: 50%;
 
-    background: rgba(255, 255, 255, 0.06);
+    background:
+        rgba(255, 255, 255, 0.06);
 
     color: #ffffff;
 
-    font-size: 21px;
+    font-size: 25px;
+
+    line-height: 1;
 
     cursor: pointer;
 }
 
 
-/* =========================
+/* ==================================================
    VIEWER BODY
-========================= */
+================================================== */
 
-#viewerBody {
+.viewer-body {
     flex: 1 1 auto;
 
     min-height: 0;
 
-    overflow: auto;
+    width: 100%;
 
     display: flex;
-
     align-items: center;
     justify-content: center;
 
-    padding: 15px;
+    overflow: auto;
+
+    padding: 10px;
 
     overscroll-behavior: contain;
 
     -webkit-overflow-scrolling: touch;
 }
 
-#viewerImage {
+.viewer-body img {
     display: block;
 
     max-width: 100%;
@@ -637,43 +817,26 @@ body {
 
     object-fit: contain;
 
-    border-radius: 8px;
+    border-radius: 7px;
 
     box-shadow:
-        0 20px 60px rgba(0, 0, 0, 0.5);
+        0 20px 65px rgba(0, 0, 0, 0.55);
 
     user-select: none;
 
     -webkit-user-drag: none;
 }
 
-#viewerImage.hidden {
+.viewer-body img.hidden {
     display: none;
 }
 
 
-/* =========================
-   VIEWER STATUS
-========================= */
+/* ==================================================
+   VIEWER LOADING
+================================================== */
 
-#viewerStatus {
-    flex: 0 0 auto;
-
-    padding: 9px 15px 12px;
-
-    text-align: center;
-
-    color: #a99aac;
-
-    font-size: 11px;
-}
-
-
-/* =========================
-   LOADING
-========================= */
-
-#viewerLoading {
+.viewer-loading {
     display: flex;
 
     flex-direction: column;
@@ -681,28 +844,32 @@ body {
     align-items: center;
     justify-content: center;
 
-    gap: 14px;
+    gap: 13px;
 
-    color: #c9b5d1;
+    color: #c7b7cd;
 
     font-size: 13px;
 }
 
-#viewerLoading.hidden {
+.viewer-loading.hidden {
     display: none;
 }
 
 .spinner {
-    width: 35px;
-    height: 35px;
+    width: 36px;
+    height: 36px;
 
-    border: 3px solid rgba(255, 255, 255, 0.12);
+    border:
+        3px solid
+        rgba(255, 255, 255, 0.11);
 
-    border-top-color: #c08ce0;
+    border-top-color:
+        #c08be0;
 
     border-radius: 50%;
 
-    animation: spin 0.8s linear infinite;
+    animation:
+        spin 0.8s linear infinite;
 }
 
 @keyframes spin {
@@ -712,104 +879,174 @@ body {
 }
 
 
-/* =========================
-   ERROR
-========================= */
+/* ==================================================
+   VIEWER ERROR
+================================================== */
 
-#viewerError {
-    max-width: 320px;
+.viewer-error {
+    max-width: 330px;
 
-    padding: 25px;
+    padding: 26px 22px;
 
     text-align: center;
 
     border-radius: 18px;
 
-    background: rgba(255, 255, 255, 0.045);
+    background:
+        rgba(255, 255, 255, 0.045);
 
-    border: 1px solid rgba(255, 255, 255, 0.07);
+    border:
+        1px solid rgba(255, 255, 255, 0.07);
 
-    color: #c5b8c9;
+    color: #c3b6c7;
 
     font-size: 13px;
 
-    line-height: 1.6;
+    line-height: 1.55;
 }
 
-#viewerError.hidden {
+.viewer-error.hidden {
     display: none;
 }
 
+.error-icon {
+    margin-bottom: 10px;
 
-/* =========================
-   GENERAL HIDDEN
-========================= */
+    font-size: 31px;
 
-.hidden {
-    display: none !important;
+    opacity: 0.8;
+}
+
+.viewer-error strong {
+    display: block;
+
+    margin-bottom: 7px;
+
+    color: #eee4f1;
+
+    font-size: 14px;
+}
+
+.viewer-error p {
+    color: #9d909f;
+
+    font-size: 12px;
 }
 
 
-/* =========================
+/* ==================================================
    MOBILE
-========================= */
+================================================== */
 
 @media (max-width: 600px) {
 
     .topbar {
-        padding: 13px 15px;
+        height: 74px;
+
+        flex-basis: 74px;
+
+        padding: 10px 14px;
     }
 
-    .brand-title {
-        font-size: 18px;
+    .brand {
+        gap: 8px;
     }
 
     .brand-icon {
-        font-size: 22px;
+        font-size: 23px;
     }
 
-    .status {
+    .brand h1 {
+        font-size: 21px;
+    }
+
+    .brand p {
+        margin-top: 2px;
+
         font-size: 11px;
     }
 
-    .tabs {
-        padding: 10px 12px 8px;
+    .online-status {
+        font-size: 11px;
     }
 
-    .tab-btn {
-        padding: 11px 10px;
+
+    .container {
+        height: calc(100vh - 116px);
+    }
+
+
+    .tabs {
+        padding: 9px 12px 8px;
+
+        gap: 7px;
+    }
+
+    .tab {
+        min-width: 0;
+
+        flex: 1;
+
+        padding: 10px 8px;
+
+        font-size: 13px;
+
+        border-radius: 11px;
+    }
+
+
+    .section-title {
+        padding: 6px 13px 8px;
+    }
+
+    .section-title small {
+        font-size: 9px;
+    }
+
+    .section-title h2 {
+        font-size: 19px;
+    }
+
+    .section-title > span {
+        min-width: 31px;
+
+        height: 26px;
+    }
+
+
+    .search {
+        padding:
+            0 13px 9px;
+    }
+
+    .search > span {
+        left: 27px;
+
+        font-size: 18px;
+    }
+
+    .search input {
+        height: 41px;
+
+        padding-left: 36px;
 
         font-size: 13px;
     }
 
-    .section-header {
-        padding: 7px 13px 9px;
-    }
-
-    .section-title {
-        font-size: 16px;
-    }
-
-    .search-box {
-        padding: 0 13px 10px;
-    }
-
-    .search-box input {
-        height: 43px;
-    }
 
     .song-list {
-        padding-left: 13px;
-        padding-right: 13px;
-        padding-bottom: 22px;
+        padding:
+            0 13px 20px;
     }
 
     .song-item {
-        min-height: 64px;
+        min-height: 63px;
+
+        margin-bottom: 7px;
 
         padding: 10px 11px;
 
-        margin-bottom: 7px;
+        gap: 10px;
 
         border-radius: 13px;
     }
@@ -826,74 +1063,111 @@ body {
     }
 
     .song-name {
-        font-size: 13.5px;
+        font-size: 13px;
     }
 
     .song-type {
-        font-size: 10.5px;
+        margin-top: 3px;
+
+        font-size: 10px;
     }
 
     .song-arrow {
-        font-size: 23px;
+        font-size: 22px;
     }
 
-    #viewerBody {
-        padding: 8px;
+
+    footer {
+        height: 42px;
+
+        flex-basis: 42px;
+
+        padding:
+            0 13px;
+
+        font-size: 10px;
     }
 
-    .viewer-header {
+    footer small {
+        font-size: 9px;
+    }
+
+
+    .viewer-bar {
         min-height: 58px;
+
         padding: 8px 10px;
     }
 
-    #closeViewer {
+    .close {
         width: 38px;
         height: 38px;
 
         flex-basis: 38px;
     }
+
+    .viewer-body {
+        padding: 6px;
+    }
 }
 
 
-/* =========================
-   VERY SMALL PHONES
-========================= */
+/* ==================================================
+   SMALL PHONES
+================================================== */
 
 @media (max-width: 380px) {
 
     .topbar {
-        padding: 11px 12px;
+        height: 70px;
+
+        flex-basis: 70px;
     }
 
-    .brand-title {
-        font-size: 16px;
+    .container {
+        height: calc(100vh - 112px);
     }
 
-    .status {
+    .brand h1 {
+        font-size: 19px;
+    }
+
+    .brand p {
+        font-size: 10px;
+    }
+
+    .online-status {
         font-size: 10px;
     }
 
     .tabs {
-        padding-left: 10px;
-        padding-right: 10px;
+        padding:
+            8px 10px 7px;
     }
 
-    .tab-btn {
+    .tab {
         font-size: 12px;
+
+        padding:
+            9px 6px;
     }
 
-    .section-header {
-        padding-left: 10px;
-        padding-right: 10px;
+    .section-title {
+        padding:
+            5px 10px 7px;
     }
 
-    .search-box {
-        padding-left: 10px;
-        padding-right: 10px;
+    .search {
+        padding:
+            0 10px 8px;
+    }
+
+    .search > span {
+        left: 23px;
     }
 
     .song-list {
-        padding-left: 10px;
-        padding-right: 10px;
+        padding:
+            0 10px 18px;
     }
 }
