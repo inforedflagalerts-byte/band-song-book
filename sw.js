@@ -1,26 +1,30 @@
-const CACHE_NAME = "band-song-book-app-v4";
+/* ==================================================
+   BAND SONG BOOK
+   CLEAN FINAL SERVICE WORKER
+================================================== */
 
-const IMAGE_CACHE = "song-book-images-v4";
+const CACHE_NAME =
+    "band-song-book-app-v5";
 
-
-/* =========================================
-   APP FILES
-========================================= */
 
 const APP_FILES = [
 
     "./",
+
     "./index.html",
+
     "./style.css",
+
     "./app.js",
+
     "./manifest.json"
 
 ];
 
 
-/* =========================================
+/* ==================================================
    INSTALL
-========================================= */
+================================================== */
 
 self.addEventListener(
     "install",
@@ -28,32 +32,27 @@ self.addEventListener(
 
         event.waitUntil(
 
-            caches
-                .open(CACHE_NAME)
-                .then(cache => {
-
-                    return cache.addAll(
-                        APP_FILES
-                    );
-
-                })
+            caches.open(
+                CACHE_NAME
+            )
+            .then(cache =>
+                cache.addAll(
+                    APP_FILES
+                )
+            )
+            .then(() =>
+                self.skipWaiting()
+            )
 
         );
-
-
-        /*
-           Activate new SW immediately
-        */
-
-        self.skipWaiting();
 
     }
 );
 
 
-/* =========================================
+/* ==================================================
    ACTIVATE
-========================================= */
+================================================== */
 
 self.addEventListener(
     "activate",
@@ -61,43 +60,79 @@ self.addEventListener(
 
         event.waitUntil(
 
-            caches
-                .keys()
+            caches.keys()
                 .then(keys => {
 
                     return Promise.all(
 
-                        keys
-                            .filter(
-                                key =>
-                                    key !== CACHE_NAME &&
-                                    key !== IMAGE_CACHE
-                            )
-                            .map(
-                                key =>
-                                    caches.delete(key)
-                            )
+                        keys.map(key => {
+
+                            /*
+                               Keep current app cache.
+
+                               Keep ALL song image caches.
+                               This prevents old saved songs
+                               from being unexpectedly deleted.
+                            */
+
+                            if (
+                                key === CACHE_NAME ||
+                                key.startsWith(
+                                    "song-book-images-"
+                                )
+                            ) {
+
+                                return null;
+
+                            }
+
+
+                            /*
+                               Delete only old app caches.
+                            */
+
+                            if (
+                                key.startsWith(
+                                    "band-song-book-app-"
+                                ) ||
+                                key ===
+                                    "band-song-book-v1" ||
+                                key ===
+                                    "band-song-book-v2" ||
+                                key ===
+                                    "band-song-book-v3" ||
+                                key ===
+                                    "band-song-book-v4"
+                            ) {
+
+                                return caches.delete(
+                                    key
+                                );
+
+                            }
+
+
+                            return null;
+
+                        })
 
                     );
 
                 })
 
+                .then(() =>
+                    self.clients.claim()
+                )
+
         );
-
-
-        /*
-           Take control of open pages
-        */
-
-        self.clients.claim();
 
     }
 );
 
 
-/* =========================================
+/* ==================================================
    FETCH
-========================================= */
+================================================== */
 
 self.addEventListener(
     "fetch",
@@ -108,7 +143,7 @@ self.addEventListener(
 
 
         /*
-           Only GET requests
+           Only handle GET.
         */
 
         if (
@@ -126,17 +161,18 @@ self.addEventListener(
             );
 
 
-        /* =====================================
-           GITHUB API
+        /*
+           IMPORTANT:
 
-           DO NOT CACHE
+           GitHub images/API are NOT put into
+           the app cache here.
 
-           app.js handles the song list.
-        ===================================== */
+           app.js controls song image caching.
+        */
 
         if (
-            url.hostname ===
-            "api.github.com"
+            url.origin !==
+            self.location.origin
         ) {
 
             return;
@@ -144,105 +180,51 @@ self.addEventListener(
         }
 
 
-        /* =====================================
-           SONG IMAGES
-
-           DO NOT AUTOMATICALLY CACHE
-
-           app.js downloads an image ONLY
-           after the user clicks it.
-        ===================================== */
-
-        if (
-
-            url.hostname ===
-            "raw.githubusercontent.com"
-
-            &&
-
-            (
-                url.pathname.includes(
-                    "/chords/"
-                )
-
-                ||
-
-                url.pathname.includes(
-                    "/lyrics/"
-                )
-            )
-
-        ) {
-
-            return;
-
-        }
-
-
-        /* =====================================
-           APP SHELL
-
-           NETWORK FIRST
-           CACHE FALLBACK
-        ===================================== */
+        /*
+           Same-origin app files:
+           Network first,
+           cache fallback.
+        */
 
         event.respondWith(
 
             fetch(request)
+                .then(response => {
 
-                .then(
-                    response => {
+                    if (
+                        response &&
+                        response.ok
+                    ) {
 
-                        /*
-                           Save successful app files
-                        */
+                        const copy =
+                            response.clone();
 
-                        if (
-                            response &&
-                            response.ok
-                        ) {
+                        caches.open(
+                            CACHE_NAME
+                        )
+                        .then(cache => {
 
-                            const copy =
-                                response.clone();
+                            cache.put(
+                                request,
+                                copy
+                            );
 
-
-                            caches
-                                .open(
-                                    CACHE_NAME
-                                )
-                                .then(
-                                    cache => {
-
-                                        cache.put(
-                                            request,
-                                            copy
-                                        );
-
-                                    }
-                                );
-
-                        }
-
-
-                        return response;
+                        });
 
                     }
-                )
 
-                .catch(
-                    () => {
 
-                        /*
-                           Internet unavailable:
-                           use saved app shell
-                        */
+                    return response;
 
-                        return caches.match(
-                            request
-                        );
+                })
 
-                    }
-                )
+                .catch(() => {
+
+                    return caches.match(
+                        request
+                    );
+
+                })
 
         );
 
