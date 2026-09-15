@@ -300,4 +300,160 @@
 .viewer-status,
 .close {
     display: none !important;
+}/* ===== FORCE FULLSCREEN IMAGE ONLY ===== */
+
+#viewer.viewer {
+    position: fixed !important;
+    inset: 0 !important;
+
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    background: #000 !important;
+
+    z-index: 999999 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    overflow: hidden !important;
+}
+
+#viewer.viewer.hidden {
+    display: none !important;
+}
+
+/* Image area */
+#viewer .viewer-body {
+    position: fixed !important;
+    inset: 0 !important;
+
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    background: #000 !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    overflow: hidden !important;
+
+    touch-action: none !important;
+}
+
+/* IMAGE */
+#viewer #viewerImage {
+    display: block !important;
+
+    width: auto !important;
+    height: auto !important;
+
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    object-fit: contain !important;
+
+    background: #000 !important;
+
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-user-drag: none !important;
+
+    touch-action: none !important;
+
+    transform-origin: center center !important;
+
+    will-change: transform !important;
+}
+
+/* Zoom */
+#viewer #viewerImage.zoomed {
+    cursor: grab !important;
+}
+
+#viewer #viewerImage.zoomed:active {
+    cursor: grabbing !important;
+}
+
+/* Old header - completely remove */
+#viewer .viewer-bar,
+#viewer .viewer-title,
+#viewer .viewer-status,
+#viewer .close {
+    display: none !important;
+}
+
+/* Loading */
+#viewer .viewer-loading {
+    position: fixed !important;
+    inset: 0 !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-direction: column;
+
+    background: #000 !important;
+
+    z-index: 10 !important;
+}
+
+#viewer .viewer-loading.hidden {
+    display: none !important;
+}
+
+/* Error */
+#viewer .viewer-error {
+    position: fixed !important;
+    inset: 0 !important;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-direction: column;
+
+    text-align: center;
+
+    background: #000 !important;
+
+    z-index: 11 !important;
+}
+
+#viewer .viewer-error.hidden {
+    display: none !important;
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+
+    #viewer.viewer {
+        width: 100vw !important;
+        height: 100dvh !important;
+    }
+
+    #viewer .viewer-body {
+        width: 100vw !important;
+        height: 100dvh !important;
+    }
+
+    #viewer #viewerImage {
+        max-width: 100vw !important;
+        max-height: 100dvh !important;
+    }
 }
