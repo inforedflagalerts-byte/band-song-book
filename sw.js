@@ -1,5 +1,5 @@
-const CACHE_NAME = "band-song-book-app-v10";
-const IMAGE_CACHE = "song-book-images-v10";
+const CACHE_NAME = "band-song-book-app-v4";
+const IMAGE_CACHE = "song-book-images-v4";
 
 const APP_FILES = [
     "./",
@@ -13,8 +13,9 @@ self.addEventListener("install", event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(APP_FILES))
-            .then(() => self.skipWaiting())
     );
+
+    self.skipWaiting();
 });
 
 self.addEventListener("activate", event => {
@@ -22,66 +23,60 @@ self.addEventListener("activate", event => {
         caches.keys().then(keys =>
             Promise.all(
                 keys
-                    .filter(key => key !== CACHE_NAME && key !== IMAGE_CACHE)
+                    .filter(key =>
+                        key !== CACHE_NAME &&
+                        key !== IMAGE_CACHE
+                    )
                     .map(key => caches.delete(key))
             )
-        ).then(() => self.clients.claim())
+        )
     );
+
+    self.clients.claim();
 });
 
 self.addEventListener("fetch", event => {
     const request = event.request;
+
     if (request.method !== "GET") return;
 
     const url = new URL(request.url);
 
-    // Always let GitHub API return the current folder contents.
-    if (url.hostname === "api.github.com") return;
-
-    // app.js handles original song-image bytes and its own image cache.
-    if (
-        url.hostname === "raw.githubusercontent.com" &&
-        /\/chords\/|\/lyrics\//i.test(url.pathname)
-    ) return;
-
-    const sameOrigin = url.origin === self.location.origin;
-
-    const isAppFile = sameOrigin && (
-        url.pathname.endsWith("/") ||
-        url.pathname.endsWith("/index.html") ||
-        url.pathname.endsWith("/style.css") ||
-        url.pathname.endsWith("/app.js") ||
-        url.pathname.endsWith("/sw.js") ||
-        url.pathname.endsWith("/manifest.json")
-    );
-
-    if (isAppFile) {
-        event.respondWith(
-            fetch(request, { cache: "no-store" })
-                .then(response => {
-                    if (response.ok) {
-                        const copy = response.clone();
-                        caches.open(CACHE_NAME)
-                            .then(cache => cache.put(request, copy))
-                            .catch(() => {});
-                    }
-                    return response;
-                })
-                .catch(() => caches.match(request))
-        );
+    /*
+     * IMPORTANT:
+     * GitHub API is NOT automatically cached here.
+     * The app gets fresh file lists when online.
+     */
+    if (url.hostname === "api.github.com") {
         return;
     }
 
-    // Normal fallback for other same-origin requests.
+    /*
+     * Song images are controlled by app.js.
+     * Do not silently download/cache every image.
+     */
+    if (
+        url.hostname === "raw.githubusercontent.com" &&
+        /\/chords\/|\/lyrics\//i.test(url.pathname)
+    ) {
+        return;
+    }
+
+    /*
+     * App shell:
+     * Network first, cache fallback.
+     */
     event.respondWith(
         fetch(request)
             .then(response => {
-                if (response.ok && sameOrigin) {
+                if (response && response.ok) {
                     const copy = response.clone();
-                    caches.open(CACHE_NAME)
-                        .then(cache => cache.put(request, copy))
-                        .catch(() => {});
+
+                    caches.open(CACHE_NAME).then(cache => {
+                        cache.put(request, copy);
+                    });
                 }
+
                 return response;
             })
             .catch(() => caches.match(request))
