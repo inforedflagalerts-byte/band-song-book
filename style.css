@@ -293,18 +293,7 @@ body {
 /* THUMBNAIL */
 
 .thumbnail {
-    width: 56px;
-    height: 56px;
-
-    flex-shrink: 0;
-
-    overflow: hidden;
-
-    border-radius: 9px;
-
-    background: #17141b;
-
-    border: 1px solid #2a2430;
+    display: none;
 }
 
 
