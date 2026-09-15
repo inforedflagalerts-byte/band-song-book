@@ -41,7 +41,12 @@ if ("serviceWorker" in navigator) {
         navigator.serviceWorker
             .register("./sw.js")
             .catch(error => {
-                console.log("Service worker error:", error);
+
+                console.log(
+                    "Service worker error:",
+                    error
+                );
+
             });
 
     });
@@ -71,8 +76,15 @@ function updateStatus() {
 
 updateStatus();
 
-window.addEventListener("online", updateStatus);
-window.addEventListener("offline", updateStatus);
+window.addEventListener(
+    "online",
+    updateStatus
+);
+
+window.addEventListener(
+    "offline",
+    updateStatus
+);
 
 
 /* =========================================
@@ -106,16 +118,23 @@ async function loadFolder(folder) {
         );
 
         if (!response.ok) {
-            throw new Error("GitHub request failed");
+
+            throw new Error(
+                "GitHub request failed"
+            );
+
         }
 
-        const files = await response.json();
+        const files =
+            await response.json();
 
         return files.filter(file => {
 
             return (
                 file.type === "file" &&
-                /\.(jpg|jpeg|png|webp)$/i.test(file.name)
+                /\.(jpg|jpeg|png|webp)$/i.test(
+                    file.name
+                )
             );
 
         });
@@ -220,8 +239,11 @@ function loadOfflineData() {
 async function cacheClickedImage(url) {
 
     if (!("caches" in window)) {
+
         return;
+
     }
+
 
     try {
 
@@ -230,8 +252,6 @@ async function cacheClickedImage(url) {
                 IMAGE_CACHE
             );
 
-
-        /* Check whether already saved */
 
         const existing =
             await cache.match(url);
@@ -249,20 +269,35 @@ async function cacheClickedImage(url) {
         }
 
 
-        /* Save only the clicked image */
-
         console.log(
             "Saving clicked image:",
             url
         );
 
-        await cache.add(url);
+
+        const response =
+            await fetch(url);
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Image download failed"
+            );
+
+        }
+
+
+        await cache.put(
+            url,
+            response.clone()
+        );
 
 
     } catch (error) {
 
         console.log(
-            "Could not save clicked image:",
+            "Could not save image:",
             error
         );
 
@@ -329,16 +364,12 @@ async function loadData() {
         `<div class="empty">🎤 Loading...</div>`;
 
 
-    /* Load saved song list */
-
     loadOfflineData();
 
 
     renderChords(chords);
     renderLyrics(lyrics);
 
-
-    /* Offline */
 
     if (!navigator.onLine) {
 
@@ -347,8 +378,6 @@ async function loadData() {
     }
 
 
-    /* Internet available */
-
     const newChords =
         await loadFolder("chords");
 
@@ -356,39 +385,27 @@ async function loadData() {
         await loadFolder("lyrics");
 
 
-    /* =====================================
-       UPDATE CHORDS
-    ===================================== */
+    /* UPDATE CHORDS */
 
     if (newChords !== null) {
 
         chords = newChords;
 
-        localStorage.setItem(
-            "bandSongBookChords",
-            JSON.stringify(chords)
-        );
+        saveOfflineData();
 
     }
 
 
-    /* =====================================
-       UPDATE LYRICS
-    ===================================== */
+    /* UPDATE LYRICS */
 
     if (newLyrics !== null) {
 
         lyrics = newLyrics;
 
-        localStorage.setItem(
-            "bandSongBookLyrics",
-            JSON.stringify(lyrics)
-        );
+        saveOfflineData();
 
     }
 
-
-    /* Show updated lists */
 
     renderChords(chords);
     renderLyrics(lyrics);
@@ -398,6 +415,7 @@ async function loadData() {
 
 /* =========================================
    CREATE SONG ITEM
+   NO IMAGE LOADED HERE
 ========================================= */
 
 function createSongItem(file, type) {
@@ -413,15 +431,22 @@ function createSongItem(file, type) {
         cleanName(file.name);
 
 
+    /*
+     * IMPORTANT:
+     *
+     * There is NO <img> here.
+     *
+     * Therefore opening the site does NOT
+     * download the song image.
+     */
+
     item.innerHTML = `
 
         <div class="thumbnail">
 
-            <img
-                src="${file.download_url}"
-                alt=""
-                loading="lazy"
-            >
+            <div class="thumbnail-placeholder">
+                ♪
+            </div>
 
         </div>
 
@@ -447,7 +472,7 @@ function createSongItem(file, type) {
 
 
     /* =====================================
-       CLICK SONG
+       CLICK
     ===================================== */
 
     item.addEventListener(
@@ -585,38 +610,85 @@ async function openViewer(
         title;
 
 
-    /* Show viewer immediately */
-
     viewer.classList.remove(
         "hidden"
     );
+
 
     document.body.style.overflow =
         "hidden";
 
 
-    /* =====================================
-       IMPORTANT:
-       SAVE ONLY THIS CLICKED IMAGE
-    ===================================== */
+    /*
+     * If already cached:
+     * open from saved copy.
+     */
 
-    if (navigator.onLine) {
+    const cached =
+        await caches.match(image);
 
-        await cacheClickedImage(
-            image
-        );
+
+    if (cached) {
+
+        const blob =
+            await cached.blob();
+
+        viewerImage.src =
+            URL.createObjectURL(blob);
+
+        return;
 
     }
 
 
-    /* Get cached image */
+    /*
+     * Not cached yet.
+     *
+     * Download ONLY NOW.
+     */
 
-    const cachedURL =
-        await getImageURL(image);
+    if (!navigator.onLine) {
+
+        viewerImage.src = "";
+
+        alert(
+            "This song has not been saved for offline use."
+        );
+
+        return;
+
+    }
 
 
-    viewerImage.src =
-        cachedURL;
+    await cacheClickedImage(image);
+
+
+    /*
+     * Open the newly saved image.
+     */
+
+    const saved =
+        await caches.match(image);
+
+
+    if (saved) {
+
+        const blob =
+            await saved.blob();
+
+        viewerImage.src =
+            URL.createObjectURL(blob);
+
+    } else {
+
+        /*
+         * Fallback
+         */
+
+        viewerImage.src =
+            image;
+
+    }
 
 }
 
