@@ -4,7 +4,7 @@ const BRANCH = "main";
 
 const API = `https://api.github.com/repos/${USERNAME}/${REPO}/contents`;
 
-const LIST_CACHE_KEY = "bandSongBookData_v5";
+const LIST_CACHE_KEY = "bandSongBookData_v6";
 const IMAGE_CACHE = "song-book-images-v5";
 
 let chords = [];
@@ -92,28 +92,49 @@ function imageURL(file) {
 }
 
 async function loadFolder(folder) {
-    try {
-        const response = await fetch(`${API}/${folder}?ref=${BRANCH}`, {
-            cache: "no-store"
-        });
+    // GitHub Contents API returns at most 100 items per page.
+    // Keep requesting pages until all files have been collected.
+    const allFiles = [];
+    const PER_PAGE = 100;
 
-        if (!response.ok) {
-            throw new Error(`GitHub request failed: ${response.status}`);
+    try {
+        for (let page = 1; page <= 100; page++) {
+            const url = `${API}/${encodeURIComponent(folder)}?ref=${encodeURIComponent(BRANCH)}&per_page=${PER_PAGE}&page=${page}&_=${Date.now()}`;
+            const response = await fetch(url, {
+                cache: "no-store",
+                headers: {
+                    "Accept": "application/vnd.github+json",
+                    "X-GitHub-Api-Version": "2022-11-28"
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`GitHub request failed: ${response.status}`);
+            }
+
+            const files = await response.json();
+            if (!Array.isArray(files)) {
+                throw new Error("GitHub did not return a file list");
+            }
+
+            allFiles.push(...files);
+
+            // Fewer than 100 means this was the final page.
+            if (files.length < PER_PAGE) break;
         }
 
-        const files = await response.json();
-
-        return files
+        return allFiles
             .filter(file =>
                 file.type === "file" &&
-                /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name)
+                /\.(jpg|jpeg|png|webp|gif|bmp|avif)$/i.test(file.name)
             )
             .map(file => ({
                 name: file.name,
                 path: file.path,
                 download_url: file.download_url,
                 html_url: file.html_url
-            }));
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
     } catch (error) {
         console.log(`Could not load ${folder}:`, error);
         return null;
@@ -748,7 +769,7 @@ lyricSearch.addEventListener("input", event => {
                 .includes(text)
         )
     );
-}); 
+});
 
 chordsBtn.addEventListener("click", () => {
     chordsSection.classList.remove("hidden");
