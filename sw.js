@@ -1,5 +1,5 @@
-const CACHE_NAME = "band-song-book-app-v9";
-const IMAGE_CACHE = "song-book-images-v5";
+const CACHE_NAME = "band-song-book-app-v10";
+const IMAGE_CACHE = "song-book-images-v10";
 
 const APP_FILES = [
     "./",
@@ -22,10 +22,7 @@ self.addEventListener("activate", event => {
         caches.keys().then(keys =>
             Promise.all(
                 keys
-                    .filter(key =>
-                        key !== CACHE_NAME &&
-                        key !== IMAGE_CACHE
-                    )
+                    .filter(key => key !== CACHE_NAME && key !== IMAGE_CACHE)
                     .map(key => caches.delete(key))
             )
         ).then(() => self.clients.claim())
@@ -34,30 +31,29 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
     const request = event.request;
-
     if (request.method !== "GET") return;
 
     const url = new URL(request.url);
 
-    // GitHub API must ALWAYS go directly to GitHub.
+    // Always let GitHub API return the current folder contents.
     if (url.hostname === "api.github.com") return;
 
-    // Song images are handled by app.js and its image cache.
+    // app.js handles original song-image bytes and its own image cache.
     if (
         url.hostname === "raw.githubusercontent.com" &&
         /\/chords\/|\/lyrics\//i.test(url.pathname)
     ) return;
 
-    const isAppFile =
-        url.origin === self.location.origin &&
-        (
-            url.pathname.endsWith("/index.html") ||
-            url.pathname.endsWith("/app.js") ||
-            url.pathname.endsWith("/style.css") ||
-            url.pathname.endsWith("/manifest.json") ||
-            url.pathname.endsWith("/sw.js") ||
-            url.pathname.endsWith("/")
-        );
+    const sameOrigin = url.origin === self.location.origin;
+
+    const isAppFile = sameOrigin && (
+        url.pathname.endsWith("/") ||
+        url.pathname.endsWith("/index.html") ||
+        url.pathname.endsWith("/style.css") ||
+        url.pathname.endsWith("/app.js") ||
+        url.pathname.endsWith("/sw.js") ||
+        url.pathname.endsWith("/manifest.json")
+    );
 
     if (isAppFile) {
         event.respondWith(
@@ -76,10 +72,11 @@ self.addEventListener("fetch", event => {
         return;
     }
 
+    // Normal fallback for other same-origin requests.
     event.respondWith(
         fetch(request)
             .then(response => {
-                if (response.ok) {
+                if (response.ok && sameOrigin) {
                     const copy = response.clone();
                     caches.open(CACHE_NAME)
                         .then(cache => cache.put(request, copy))
