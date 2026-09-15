@@ -1176,3 +1176,36 @@ footer {
         flex-basis: 42px;
     }
 }
+
+
+/* =====================================================
+   IMAGE ZOOM
+   Pinch / Double Tap / Drag / Mouse Wheel
+===================================================== */
+
+.viewer-body {
+    touch-action: pan-x pan-y;
+}
+
+.viewer-body img {
+    transform: translate3d(0, 0, 0) scale(1);
+    transform-origin: center center;
+    transition: transform 0.08s ease;
+    will-change: transform;
+    touch-action: none;
+    cursor: default;
+}
+
+.viewer-body img.zoomed {
+    cursor: grab;
+}
+
+.viewer-body img.zoomed:active {
+    cursor: grabbing;
+}
+
+@media (max-width: 480px) {
+    .viewer-body img {
+        transition: transform 0.06s ease;
+    }
+}
