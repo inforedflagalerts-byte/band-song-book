@@ -63,7 +63,7 @@ self.addEventListener("fetch", event => {
     }
 
     /*
-     * App shell:
+     * App shell: 
      * Network first, cache fallback.
      */
     event.respondWith(
