@@ -10,7 +10,6 @@ const IMAGE_CACHE = "song-book-images-v4";
 let chords = [];
 let lyrics = [];
 
-
 /* =====================================================
    ELEMENTS
 ===================================================== */
@@ -18,50 +17,65 @@ let lyrics = [];
 const chordsBtn = document.getElementById("chordsBtn");
 const lyricsBtn = document.getElementById("lyricsBtn");
 
-const chordsSection =
-    document.getElementById("chordsSection");
+const chordsSection = document.getElementById("chordsSection");
+const lyricsSection = document.getElementById("lyricsSection");
 
-const lyricsSection =
-    document.getElementById("lyricsSection");
+const chordList = document.getElementById("chordList");
+const lyricList = document.getElementById("lyricList");
 
-const chordList =
-    document.getElementById("chordList");
+const chordSearch = document.getElementById("chordSearch");
+const lyricSearch = document.getElementById("lyricSearch");
 
-const lyricList =
-    document.getElementById("lyricList");
+const viewer = document.getElementById("viewer");
+const viewerBody = document.getElementById("viewerBody");
+const viewerImage = document.getElementById("viewerImage");
 
-const chordSearch =
-    document.getElementById("chordSearch");
+const viewerTitle = document.getElementById("viewerTitle");
+const viewerStatus = document.getElementById("viewerStatus");
 
-const lyricSearch =
-    document.getElementById("lyricSearch");
+const viewerLoading = document.getElementById("viewerLoading");
+const viewerError = document.getElementById("viewerError");
 
-const viewer =
-    document.getElementById("viewer");
+const closeViewer = document.getElementById("closeViewer");
+const status = document.getElementById("status");
 
-const viewerBody =
-    document.getElementById("viewerBody");
 
-const viewerImage =
-    document.getElementById("viewerImage");
+/* =====================================================
+   IMAGE ZOOM SETTINGS
+===================================================== */
 
-const viewerTitle =
-    document.getElementById("viewerTitle");
+/*
+   Small / smooth zoom.
 
-const viewerStatus =
-    document.getElementById("viewerStatus");
+   1.00 = normal
+   1.25 = small zoom
+   1.50 = medium
+   1.75 = larger
+   2.00 = maximum
 
-const viewerLoading =
-    document.getElementById("viewerLoading");
+   Double tap is intentionally NOT used.
+*/
 
-const viewerError =
-    document.getElementById("viewerError");
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2;
 
-const closeViewer =
-    document.getElementById("closeViewer");
+let zoomScale = 1;
+let zoomX = 0;
+let zoomY = 0;
 
-const status =
-    document.getElementById("status");
+let isDragging = false;
+
+let dragStartX = 0;
+let dragStartY = 0;
+
+let dragOriginX = 0;
+let dragOriginY = 0;
+
+let pinchActive = false;
+let pinchStartDistance = 0;
+let pinchStartZoom = 1;
+
+let lastTouchTime = 0;
 
 
 /* =====================================================
@@ -69,15 +83,11 @@ const status =
 ===================================================== */
 
 if ("serviceWorker" in navigator) {
-
     window.addEventListener("load", () => {
-
         navigator.serviceWorker
             .register("./sw.js")
             .then(() => {
-                console.log(
-                    "Service Worker registered"
-                );
+                console.log("Service Worker registered");
             })
             .catch(error => {
                 console.log(
@@ -85,9 +95,7 @@ if ("serviceWorker" in navigator) {
                     error
                 );
             });
-
     });
-
 }
 
 
@@ -100,15 +108,13 @@ function updateStatus() {
     if (navigator.onLine) {
 
         status.textContent = "● Online";
-
         status.style.color = "#8ed89b";
 
     } else {
 
-        status.textContent =
-            "● Offline Ready";
-
+        status.textContent = "● Offline Ready";
         status.style.color = "#c59dd9";
+
     }
 }
 
@@ -126,7 +132,7 @@ window.addEventListener(
 
 
 /* =====================================================
-   NAME
+   HELPERS
 ===================================================== */
 
 function cleanName(name) {
@@ -139,15 +145,11 @@ function cleanName(name) {
 }
 
 
-/* =====================================================
-   IMAGE URL
-===================================================== */
-
 function imageURL(file) {
 
     return file.download_url ||
-        file.html_url ||
-        "";
+           file.html_url ||
+           "";
 }
 
 
@@ -159,19 +161,19 @@ async function loadFolder(folder) {
 
     try {
 
-        const response =
-            await fetch(
-                `${API}/${folder}?ref=${BRANCH}`,
-                {
-                    cache: "no-store"
-                }
-            );
+        const response = await fetch(
+            `${API}/${folder}?ref=${BRANCH}`,
+            {
+                cache: "no-store"
+            }
+        );
 
         if (!response.ok) {
 
             throw new Error(
                 `GitHub request failed: ${response.status}`
             );
+
         }
 
         const files =
@@ -180,8 +182,9 @@ async function loadFolder(folder) {
         return files
             .filter(file =>
                 file.type === "file" &&
-                /\.(jpg|jpeg|png|webp|gif)$/i
-                    .test(file.name)
+                /\.(jpg|jpeg|png|webp|gif)$/i.test(
+                    file.name
+                )
             )
             .map(file => ({
                 name: file.name,
@@ -203,7 +206,7 @@ async function loadFolder(folder) {
 
 
 /* =====================================================
-   SAVE LIST DATA
+   SAVE SONG LIST
 ===================================================== */
 
 function saveListData() {
@@ -224,12 +227,13 @@ function saveListData() {
             "List storage error:",
             error
         );
+
     }
 }
 
 
 /* =====================================================
-   LOAD LIST DATA
+   LOAD SONG LIST FROM DEVICE
 ===================================================== */
 
 function loadListData() {
@@ -289,10 +293,6 @@ async function getImageCache() {
 }
 
 
-/* =====================================================
-   GET CACHED IMAGE
-===================================================== */
-
 async function getCachedImageURL(url) {
 
     const cache =
@@ -312,18 +312,20 @@ async function getCachedImageURL(url) {
     const blob =
         await response.blob();
 
-    return URL.createObjectURL(blob);
+    return URL.createObjectURL(
+        blob
+    );
 }
 
-
-/* =====================================================
-   DOWNLOAD + SAVE IMAGE
-===================================================== */
 
 async function downloadAndCacheImage(url) {
 
     const cache =
         await getImageCache();
+
+    /*
+       Browser does not support Cache API.
+    */
 
     if (!cache) {
 
@@ -340,6 +342,7 @@ async function downloadAndCacheImage(url) {
             throw new Error(
                 "Image download failed"
             );
+
         }
 
         const blob =
@@ -351,7 +354,10 @@ async function downloadAndCacheImage(url) {
     }
 
 
-    /* Already saved */
+    /*
+       Check cache FIRST.
+       If saved already, don't download again.
+    */
 
     const existing =
         await cache.match(url);
@@ -367,17 +373,22 @@ async function downloadAndCacheImage(url) {
     }
 
 
-    /* Offline */
+    /*
+       No saved copy + offline.
+    */
 
     if (!navigator.onLine) {
 
         throw new Error(
             "OFFLINE_IMAGE_NOT_SAVED"
         );
+
     }
 
 
-    /* Download */
+    /*
+       Download only the clicked image.
+    */
 
     const response =
         await fetch(
@@ -393,10 +404,13 @@ async function downloadAndCacheImage(url) {
         throw new Error(
             "Image download failed"
         );
+
     }
 
 
-    /* Save a copy */
+    /*
+       Save image.
+    */
 
     const copy =
         response.clone();
@@ -423,22 +437,25 @@ async function downloadAndCacheImage(url) {
 async function loadData() {
 
     chordList.innerHTML =
-        `<div class="empty">
-            🎸 Loading library...
-        </div>`;
+        `<div class="empty">🎸 Loading library...</div>`;
 
     lyricList.innerHTML =
-        `<div class="empty">
-            🎤 Loading library...
-        </div>`;
+        `<div class="empty">🎤 Loading library...</div>`;
 
+
+    /*
+       Load previously saved song list.
+    */
 
     loadListData();
-
 
     renderChords(chords);
     renderLyrics(lyrics);
 
+
+    /*
+       If offline, use saved list.
+    */
 
     if (!navigator.onLine) {
         return;
@@ -465,14 +482,13 @@ async function loadData() {
 
     saveListData();
 
-
     renderChords(chords);
     renderLyrics(lyrics);
 }
 
 
 /* =====================================================
-   CREATE SONG ITEM
+   SONG ITEM
 ===================================================== */
 
 function createSongItem(file, type) {
@@ -535,7 +551,8 @@ function createSongItem(file, type) {
     arrow.className =
         "song-arrow";
 
-    arrow.textContent = "›";
+    arrow.textContent =
+        "›";
 
 
     item.appendChild(icon);
@@ -568,8 +585,8 @@ function renderChords(list) {
 
     document.getElementById(
         "chordCount"
-    ).textContent = list.length;
-
+    ).textContent =
+        list.length;
 
     chordList.innerHTML = "";
 
@@ -578,9 +595,7 @@ function renderChords(list) {
 
         chordList.innerHTML = `
             <div class="empty">
-                <div class="empty-icon">
-                    🎸
-                </div>
+                <div class="empty-icon">🎸</div>
                 No chord sheets available.
             </div>
         `;
@@ -610,8 +625,8 @@ function renderLyrics(list) {
 
     document.getElementById(
         "lyricCount"
-    ).textContent = list.length;
-
+    ).textContent =
+        list.length;
 
     lyricList.innerHTML = "";
 
@@ -620,9 +635,7 @@ function renderLyrics(list) {
 
         lyricList.innerHTML = `
             <div class="empty">
-                <div class="empty-icon">
-                    🎤
-                </div>
+                <div class="empty-icon">🎤</div>
                 No lyrics available.
             </div>
         `;
@@ -667,13 +680,17 @@ function setViewerState(state) {
             navigator.onLine
                 ? "Downloading & saving this image..."
                 : "Checking saved image...";
+
     }
 
 
     if (state === "ready") {
 
         viewerStatus.textContent =
-            "Saved on this device • Offline ready";
+            zoomScale > 1
+                ? `${zoomScale.toFixed(2)}x • Saved on this device`
+                : "Saved on this device • Offline ready";
+
     }
 
 
@@ -681,52 +698,148 @@ function setViewerState(state) {
 
         viewerStatus.textContent =
             "Not saved on this device";
+
     }
 }
 
 
 /* =====================================================
-   ZOOM SYSTEM
+   ZOOM FUNCTIONS
 ===================================================== */
 
-let zoomScale = 1;
+function clamp(
+    value,
+    min,
+    max
+) {
 
-let zoomX = 0;
-let zoomY = 0;
+    return Math.min(
+        Math.max(value, min),
+        max
+    );
+}
 
-let startDistance = 0;
-let startScale = 1;
-
-let startPanX = 0;
-let startPanY = 0;
-
-let startPointerX = 0;
-let startPointerY = 0;
-
-let isDragging = false;
-
-let lastTapTime = 0;
-
-const MIN_ZOOM = 1;
-
-const MAX_ZOOM = 4;
-
-
-/* =====================================================
-   APPLY ZOOM
-===================================================== */
 
 function applyZoom() {
 
     viewerImage.style.transform =
         `translate3d(${zoomX}px, ${zoomY}px, 0) scale(${zoomScale})`;
 
+
+    if (zoomScale > 1) {
+
+        viewerImage.classList.add(
+            "zoomed"
+        );
+
+    } else {
+
+        viewerImage.classList.remove(
+            "zoomed"
+        );
+
+    }
+
+
+    if (
+        viewerStatus &&
+        !viewerLoading.classList.contains("hidden")
+    ) {
+        return;
+    }
+
+
+    if (
+        viewerError &&
+        !viewerError.classList.contains("hidden")
+    ) {
+        return;
+    }
+
+
+    viewerStatus.textContent =
+        zoomScale > 1
+            ? `${zoomScale.toFixed(2)}x • Saved on this device`
+            : "Saved on this device • Offline ready";
 }
 
 
-/* =====================================================
-   RESET ZOOM
-===================================================== */
+function setZoom(
+    newScale,
+    centerX = 0,
+    centerY = 0
+) {
+
+    const oldScale =
+        zoomScale;
+
+    zoomScale =
+        clamp(
+            newScale,
+            MIN_ZOOM,
+            MAX_ZOOM
+        );
+
+
+    /*
+       If returning to normal size,
+       remove movement.
+    */
+
+    if (zoomScale === 1) {
+
+        zoomX = 0;
+        zoomY = 0;
+
+    } else {
+
+        /*
+           Keep movement small and stable.
+           The zoom is intentionally limited.
+        */
+
+        const ratio =
+            zoomScale / oldScale;
+
+        zoomX =
+            zoomX * ratio;
+
+        zoomY =
+            zoomY * ratio;
+
+        const maxMoveX =
+            Math.max(
+                0,
+                (viewerBody.clientWidth *
+                    (zoomScale - 1)) / 2
+            );
+
+        const maxMoveY =
+            Math.max(
+                0,
+                (viewerBody.clientHeight *
+                    (zoomScale - 1)) / 2
+            );
+
+        zoomX =
+            clamp(
+                zoomX,
+                -maxMoveX,
+                maxMoveX
+            );
+
+        zoomY =
+            clamp(
+                zoomY,
+                -maxMoveY,
+                maxMoveY
+            );
+    }
+
+
+    applyZoom();
+}
+
 
 function resetZoom() {
 
@@ -735,78 +848,34 @@ function resetZoom() {
     zoomX = 0;
     zoomY = 0;
 
+    isDragging = false;
+    pinchActive = false;
+
     viewerImage.style.transform =
         "translate3d(0, 0, 0) scale(1)";
 
-    viewerImage.style.maxWidth =
-        "100%";
-
-    viewerImage.style.maxHeight =
-        "100%";
-
-    viewerBody.scrollLeft = 0;
-    viewerBody.scrollTop = 0;
+    viewerImage.classList.remove(
+        "zoomed"
+    );
 }
 
 
 /* =====================================================
-   SET ZOOM
+   TOUCH HELPERS
 ===================================================== */
 
-function setZoom(scale) {
-
-    zoomScale =
-        Math.max(
-            MIN_ZOOM,
-            Math.min(
-                MAX_ZOOM,
-                scale
-            )
-        );
-
-
-    if (zoomScale === 1) {
-
-        zoomX = 0;
-        zoomY = 0;
-
-        viewerImage.style.maxWidth =
-            "100%";
-
-        viewerImage.style.maxHeight =
-            "100%";
-
-    } else {
-
-        /*
-         * Allow image to become larger
-         * than the viewer when zoomed.
-         */
-        viewerImage.style.maxWidth =
-            "none";
-
-        viewerImage.style.maxHeight =
-            "none";
-    }
-
-
-    applyZoom();
-}
-
-
-/* =====================================================
-   DISTANCE BETWEEN TWO TOUCH POINTS
-===================================================== */
-
-function getTouchDistance(touches) {
+function getTouchDistance(
+    touch1,
+    touch2
+) {
 
     const dx =
-        touches[0].clientX -
-        touches[1].clientX;
+        touch1.clientX -
+        touch2.clientX;
 
     const dy =
-        touches[0].clientY -
-        touches[1].clientY;
+        touch1.clientY -
+        touch2.clientY;
 
     return Math.sqrt(
         dx * dx +
@@ -816,82 +885,63 @@ function getTouchDistance(touches) {
 
 
 /* =====================================================
-   TOUCH START
+   MOBILE PINCH ZOOM
 ===================================================== */
 
 viewerImage.addEventListener(
     "touchstart",
     event => {
 
+        /*
+           Two fingers = pinch.
+        */
+
         if (event.touches.length === 2) {
 
             event.preventDefault();
 
-            startDistance =
-                getTouchDistance(
-                    event.touches
-                );
-
-            startScale =
-                zoomScale;
+            pinchActive = true;
 
             isDragging = false;
+
+            pinchStartDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+            pinchStartZoom =
+                zoomScale;
 
             return;
         }
 
 
-        if (event.touches.length === 1) {
+        /*
+           One finger = possible drag,
+           but ONLY after zoom > 1.
+        */
 
-            const now =
-                Date.now();
+        if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
 
+            event.preventDefault();
 
-            /*
-             * Double tap
-             */
-            if (
-                now - lastTapTime <
-                300
-            ) {
+            isDragging = true;
 
-                event.preventDefault();
+            dragStartX =
+                event.touches[0].clientX;
 
+            dragStartY =
+                event.touches[0].clientY;
 
-                if (zoomScale > 1) {
+            dragOriginX =
+                zoomX;
 
-                    resetZoom();
-
-                } else {
-
-                    setZoom(2.2);
-
-                }
-
-
-                lastTapTime = 0;
-
-                return;
-            }
-
-
-            lastTapTime = now;
-
-
-            if (zoomScale > 1) {
-
-                startPointerX =
-                    event.touches[0].clientX;
-
-                startPointerY =
-                    event.touches[0].clientY;
-
-                startPanX = zoomX;
-                startPanY = zoomY;
-
-                isDragging = true;
-
-            }
+            dragOriginY =
+                zoomY;
         }
 
     },
@@ -902,7 +952,7 @@ viewerImage.addEventListener(
 
 
 /* =====================================================
-   TOUCH MOVE
+   MOBILE TOUCH MOVE
 ===================================================== */
 
 viewerImage.addEventListener(
@@ -910,50 +960,60 @@ viewerImage.addEventListener(
     event => {
 
         /*
-         * PINCH ZOOM
-         */
-        if (event.touches.length === 2) {
+           PINCH
+        */
+
+        if (
+            pinchActive &&
+            event.touches.length === 2
+        ) {
 
             event.preventDefault();
 
-
-            const distance =
+            const currentDistance =
                 getTouchDistance(
-                    event.touches
+                    event.touches[0],
+                    event.touches[1]
                 );
 
 
-            if (!startDistance) {
+            if (pinchStartDistance <= 0) {
                 return;
             }
 
 
             const ratio =
-                distance /
-                startDistance;
+                currentDistance /
+                pinchStartDistance;
+
+
+            /*
+               Smooth limited zoom.
+            */
+
+            const newZoom =
+                pinchStartZoom * ratio;
 
 
             setZoom(
-                startScale *
-                ratio
+                newZoom
             );
-
 
             return;
         }
 
 
         /*
-         * DRAG
-         */
+           DRAG
+        */
+
         if (
+            isDragging &&
             event.touches.length === 1 &&
-            zoomScale > 1 &&
-            isDragging
+            zoomScale > 1
         ) {
 
             event.preventDefault();
-
 
             const currentX =
                 event.touches[0].clientX;
@@ -962,18 +1022,42 @@ viewerImage.addEventListener(
                 event.touches[0].clientY;
 
 
+            const dx =
+                currentX -
+                dragStartX;
+
+            const dy =
+                currentY -
+                dragStartY;
+
+
+            const maxMoveX =
+                Math.max(
+                    0,
+                    (viewerBody.clientWidth *
+                        (zoomScale - 1)) / 2
+                );
+
+            const maxMoveY =
+                Math.max(
+                    0,
+                    (viewerBody.clientHeight *
+                        (zoomScale - 1)) / 2
+                );
+
+
             zoomX =
-                startPanX +
-                (
-                    currentX -
-                    startPointerX
+                clamp(
+                    dragOriginX + dx,
+                    -maxMoveX,
+                    maxMoveX
                 );
 
             zoomY =
-                startPanY +
-                (
-                    currentY -
-                    startPointerY
+                clamp(
+                    dragOriginY + dy,
+                    -maxMoveY,
+                    maxMoveY
                 );
 
 
@@ -996,11 +1080,11 @@ viewerImage.addEventListener(
     event => {
 
         if (
-            event.touches.length <
-            2
+            event.touches.length < 2
         ) {
 
-            startDistance = 0;
+            pinchActive = false;
+
         }
 
 
@@ -1009,6 +1093,7 @@ viewerImage.addEventListener(
         ) {
 
             isDragging = false;
+
         }
 
     },
@@ -1019,14 +1104,40 @@ viewerImage.addEventListener(
 
 
 /* =====================================================
-   MOUSE WHEEL ZOOM
+   DISABLE DOUBLE TAP ZOOM
+===================================================== */
+
+viewerImage.addEventListener(
+    "touchend",
+    event => {
+
+        /*
+           This intentionally does NOTHING.
+
+           Double tap zoom has been removed.
+        */
+
+        lastTouchTime = Date.now();
+
+    },
+    {
+        passive: true
+    }
+);
+
+
+/* =====================================================
+   PC MOUSE WHEEL ZOOM
 ===================================================== */
 
 viewerBody.addEventListener(
     "wheel",
     event => {
 
-        if (!viewerImage.src) {
+        if (
+            viewer.classList.contains("hidden") ||
+            viewerImage.classList.contains("hidden")
+        ) {
             return;
         }
 
@@ -1034,15 +1145,18 @@ viewerBody.addEventListener(
         event.preventDefault();
 
 
-        const amount =
+        /*
+           Small zoom steps.
+        */
+
+        const step =
             event.deltaY < 0
-                ? 0.15
-                : -0.15;
+                ? 0.125
+                : -0.125;
 
 
         setZoom(
-            zoomScale +
-            amount
+            zoomScale + step
         );
 
     },
@@ -1053,25 +1167,98 @@ viewerBody.addEventListener(
 
 
 /* =====================================================
-   DOUBLE CLICK PC
+   PC DRAG
 ===================================================== */
 
 viewerImage.addEventListener(
-    "dblclick",
+    "mousedown",
     event => {
+
+        if (zoomScale <= 1) {
+            return;
+        }
 
         event.preventDefault();
 
+        isDragging = true;
 
-        if (zoomScale > 1) {
+        dragStartX =
+            event.clientX;
 
-            resetZoom();
+        dragStartY =
+            event.clientY;
 
-        } else {
+        dragOriginX =
+            zoomX;
 
-            setZoom(2.2);
+        dragOriginY =
+            zoomY;
+    }
+);
 
+
+window.addEventListener(
+    "mousemove",
+    event => {
+
+        if (!isDragging) {
+            return;
         }
+
+        if (zoomScale <= 1) {
+            return;
+        }
+
+
+        const dx =
+            event.clientX -
+            dragStartX;
+
+        const dy =
+            event.clientY -
+            dragStartY;
+
+
+        const maxMoveX =
+            Math.max(
+                0,
+                (viewerBody.clientWidth *
+                    (zoomScale - 1)) / 2
+            );
+
+        const maxMoveY =
+            Math.max(
+                0,
+                (viewerBody.clientHeight *
+                    (zoomScale - 1)) / 2
+            );
+
+
+        zoomX =
+            clamp(
+                dragOriginX + dx,
+                -maxMoveX,
+                maxMoveX
+            );
+
+        zoomY =
+            clamp(
+                dragOriginY + dy,
+                -maxMoveY,
+                maxMoveY
+            );
+
+
+        applyZoom();
+    }
+);
+
+
+window.addEventListener(
+    "mouseup",
+    () => {
+
+        isDragging = false;
 
     }
 );
@@ -1099,7 +1286,6 @@ async function openViewer(
         "hidden"
     );
 
-
     viewer.setAttribute(
         "aria-hidden",
         "false"
@@ -1110,17 +1296,20 @@ async function openViewer(
         "hidden";
 
 
-    viewerBody.scrollTop = 0;
-    viewerBody.scrollLeft = 0;
-
+    /*
+       ALWAYS start at normal size.
+    */
 
     resetZoom();
+
+
+    viewerBody.scrollTop = 0;
+    viewerBody.scrollLeft = 0;
 
 
     viewerImage.removeAttribute(
         "src"
     );
-
 
     viewerImage.classList.add(
         "hidden"
@@ -1135,9 +1324,9 @@ async function openViewer(
     try {
 
         /*
-         * FIRST:
-         * Check local saved copy.
-         */
+           First check locally saved image.
+        */
+
         let cachedURL =
             await getCachedImageURL(
                 image
@@ -1153,7 +1342,6 @@ async function openViewer(
                 "hidden"
             );
 
-            resetZoom();
 
             setViewerState(
                 "ready"
@@ -1164,20 +1352,22 @@ async function openViewer(
 
 
         /*
-         * No saved copy + offline.
-         */
+           Not saved + offline.
+        */
+
         if (!navigator.onLine) {
 
             throw new Error(
                 "OFFLINE_IMAGE_NOT_SAVED"
             );
+
         }
 
 
         /*
-         * Online:
-         * Download and save only this image.
-         */
+           Download ONLY this clicked image.
+        */
+
         const localURL =
             await downloadAndCacheImage(
                 image
@@ -1187,13 +1377,9 @@ async function openViewer(
         viewerImage.src =
             localURL;
 
-
         viewerImage.classList.remove(
             "hidden"
         );
-
-
-        resetZoom();
 
 
         setViewerState(
@@ -1212,7 +1398,6 @@ async function openViewer(
         viewerImage.removeAttribute(
             "src"
         );
-
 
         viewerImage.classList.add(
             "hidden"
@@ -1236,7 +1421,6 @@ function closeImageViewer() {
         "hidden"
     );
 
-
     viewer.setAttribute(
         "aria-hidden",
         "true"
@@ -1250,7 +1434,6 @@ function closeImageViewer() {
     viewerImage.removeAttribute(
         "src"
     );
-
 
     viewerImage.classList.add(
         "hidden"
@@ -1283,10 +1466,6 @@ function closeImageViewer() {
 }
 
 
-/* =====================================================
-   CLOSE BUTTON
-===================================================== */
-
 closeViewer.addEventListener(
     "click",
     closeImageViewer
@@ -1294,7 +1473,7 @@ closeViewer.addEventListener(
 
 
 /* =====================================================
-   CLICK OUTSIDE VIEWER
+   CLOSE BY BACKGROUND CLICK
 ===================================================== */
 
 viewer.addEventListener(
@@ -1307,14 +1486,14 @@ viewer.addEventListener(
         ) {
 
             closeImageViewer();
-        }
 
+        }
     }
 );
 
 
 /* =====================================================
-   ESC KEY
+   ESCAPE KEY
 ===================================================== */
 
 document.addEventListener(
@@ -1326,14 +1505,14 @@ document.addEventListener(
         ) {
 
             closeImageViewer();
-        }
 
+        }
     }
 );
 
 
 /* =====================================================
-   SEARCH CHORDS
+   CHORD SEARCH
 ===================================================== */
 
 chordSearch.addEventListener(
@@ -1356,13 +1535,12 @@ chordSearch.addEventListener(
                     .includes(text)
             )
         );
-
     }
 );
 
 
 /* =====================================================
-   SEARCH LYRICS
+   LYRICS SEARCH
 ===================================================== */
 
 lyricSearch.addEventListener(
@@ -1385,7 +1563,6 @@ lyricSearch.addEventListener(
                     .includes(text)
             )
         );
-
     }
 );
 
