@@ -1,5 +1,5 @@
-const CACHE_NAME = "band-song-book-app-v4";
-const IMAGE_CACHE = "song-book-images-v4";
+const CACHE_NAME = "band-song-book-app-v6";
+const IMAGE_CACHE = "song-book-images-v6";
 
 const APP_FILES = [
     "./",
@@ -63,7 +63,7 @@ self.addEventListener("fetch", event => {
     }
 
     /*
-     * App shell: 
+     * App shell:
      * Network first, cache fallback.
      */
     event.respondWith(
