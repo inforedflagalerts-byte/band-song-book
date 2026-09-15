@@ -1,4 +1,4 @@
-const CACHE_NAME = "band-song-book-v4";
+const CACHE_NAME = "band-song-book-v5";
 
 const APP_FILES = [
     "./",
@@ -52,16 +52,31 @@ self.addEventListener(
 
                     return Promise.all(
 
-                        keys
-                            .filter(
-                                key =>
-                                    key !== CACHE_NAME &&
-                                    key !== "song-book-images-v2"
-                            )
-                            .map(
-                                key =>
-                                    caches.delete(key)
-                            )
+                        keys.map(key => {
+
+                            /*
+                             * Keep:
+                             * - current app cache
+                             * - manually saved song images
+                             */
+
+                            if (
+                                key === CACHE_NAME ||
+                                key === "song-book-images-v2"
+                            ) {
+
+                                return Promise.resolve();
+
+                            }
+
+                            /*
+                             * Delete every old
+                             * service-worker cache.
+                             */
+
+                            return caches.delete(key);
+
+                        })
 
                     );
 
@@ -86,8 +101,17 @@ self.addEventListener(
         const request =
             event.request;
 
-        if (request.method !== "GET") {
+
+        /*
+         * Only handle GET requests.
+         */
+
+        if (
+            request.method !== "GET"
+        ) {
+
             return;
+
         }
 
 
@@ -96,21 +120,23 @@ self.addEventListener(
 
 
         /*
-         * GitHub image files must NOT be
-         * automatically cached by service worker.
+         * =====================================
+         * ALL IMAGE REQUESTS
+         * =====================================
          *
-         * They are cached only when the user
-         * clicks the song.
+         * NEVER automatically cache images.
+         *
+         * Images are saved only by app.js
+         * when the user clicks a song.
          */
 
-        const isGitHubImage =
-            url.hostname === "raw.githubusercontent.com" &&
-            /\.(jpg|jpeg|png|webp)$/i.test(
+        const isImage =
+            /\.(jpg|jpeg|png|webp|gif)$/i.test(
                 url.pathname
             );
 
 
-        if (isGitHubImage) {
+        if (isImage) {
 
             event.respondWith(
                 fetch(request)
@@ -122,9 +148,13 @@ self.addEventListener(
 
 
         /*
-         * Normal app files:
-         * Network first,
-         * offline cache as fallback.
+         * =====================================
+         * NORMAL APP FILES
+         * =====================================
+         *
+         * Network first.
+         * If internet is unavailable,
+         * use saved app files.
          */
 
         event.respondWith(
@@ -140,6 +170,7 @@ self.addEventListener(
                         const copy =
                             response.clone();
 
+
                         caches
                             .open(CACHE_NAME)
                             .then(cache => {
@@ -152,6 +183,7 @@ self.addEventListener(
                             });
 
                     }
+
 
                     return response;
 
