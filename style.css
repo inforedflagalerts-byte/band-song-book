@@ -1177,10 +1177,10 @@ footer {
     }
 }
 
-
 /* =====================================================
    IMAGE ZOOM
-   Pinch / Double Tap / Drag / Mouse Wheel
+   SMALL / SMOOTH ZOOM
+   Double-tap zoom is OFF
 ===================================================== */
 
 .viewer-body {
@@ -1188,11 +1188,23 @@ footer {
 }
 
 .viewer-body img {
-    transform: translate3d(0, 0, 0) scale(1);
+    transform:
+        translate3d(0, 0, 0)
+        scale(1);
+
     transform-origin: center center;
-    transition: transform 0.08s ease;
+
+    transition:
+        transform 0.08s ease;
+
     will-change: transform;
+
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+
     touch-action: none;
+
     cursor: default;
 }
 
@@ -1206,6 +1218,14 @@ footer {
 
 @media (max-width: 480px) {
     .viewer-body img {
-        transition: transform 0.06s ease;
+        transition:
+            transform 0.06s ease;
+    }
+}
+
+@media (max-width: 360px) {
+    .viewer-body img {
+        transition:
+            transform 0.06s ease;
     }
 }
