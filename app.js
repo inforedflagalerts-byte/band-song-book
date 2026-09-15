@@ -4,7 +4,7 @@ const BRANCH = "main";
 
 const API = `https://api.github.com/repos/${USERNAME}/${REPO}/contents`;
 
-const LIST_CACHE_KEY = "bandSongBookData_v5";
+const LIST_CACHE_KEY = "bandSongBookData_v6";
 const IMAGE_CACHE = "song-book-images-v5";
 
 let chords = [];
@@ -30,13 +30,10 @@ const viewerStatus = document.getElementById("viewerStatus");
 const viewerLoading = document.getElementById("viewerLoading");
 const viewerError = document.getElementById("viewerError");
 const closeViewer = document.getElementById("closeViewer");
-const fullscreenViewer = document.getElementById("fullscreenViewer");
 const status = document.getElementById("status");
 
 /* =====================================================
-   SMALL IMAGE ZOOM
-   Double-tap is OFF.
-   Pinch / wheel: 1x -> 1.25x -> 1.5x -> 1.75x -> 2x
+   IMAGE ZOOM
 ===================================================== */
 
 const MIN_ZOOM = 1;
@@ -56,6 +53,10 @@ let pinchActive = false;
 let pinchStartDistance = 0;
 let pinchStartZoom = 1;
 
+/* =====================================================
+   SERVICE WORKER
+===================================================== */
+
 if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
         navigator.serviceWorker
@@ -64,6 +65,10 @@ if ("serviceWorker" in navigator) {
             .catch(error => console.log("Service Worker error:", error));
     });
 }
+
+/* =====================================================
+   ONLINE STATUS
+===================================================== */
 
 function updateStatus() {
     if (navigator.onLine) {
@@ -76,8 +81,23 @@ function updateStatus() {
 }
 
 updateStatus();
-window.addEventListener("online", updateStatus);
+
+window.addEventListener("online", () => {
+    updateStatus();
+
+    /*
+     * When internet comes back, immediately check GitHub again.
+     * This allows newly-added lyrics/chords to appear without
+     * relying on the old localStorage list.
+     */
+    loadData(true);
+});
+
 window.addEventListener("offline", updateStatus);
+
+/* =====================================================
+   NAME
+===================================================== */
 
 function cleanName(name) {
     return name
@@ -91,11 +111,29 @@ function imageURL(file) {
     return file.download_url || file.html_url || "";
 }
 
+/* =====================================================
+   GITHUB FOLDER LOADER
+   IMPORTANT:
+   Always asks GitHub for the current folder contents.
+   No old list is used when online.
+===================================================== */
+
 async function loadFolder(folder) {
     try {
-        const response = await fetch(`${API}/${folder}?ref=${BRANCH}`, {
-            cache: "no-store"
-        });
+        const cacheBuster = Date.now();
+
+        const response = await fetch(
+            `${API}/${folder}?ref=${encodeURIComponent(BRANCH)}&_=${cacheBuster}`,
+            {
+                method: "GET",
+                cache: "no-store",
+                headers: {
+                    "Accept": "application/vnd.github+json",
+                    "Cache-Control": "no-cache",
+                    "Pragma": "no-cache"
+                }
+            }
+        );
 
         if (!response.ok) {
             throw new Error(`GitHub request failed: ${response.status}`);
@@ -103,8 +141,13 @@ async function loadFolder(folder) {
 
         const files = await response.json();
 
-        return files
+        if (!Array.isArray(files)) {
+            throw new Error("GitHub returned invalid folder data");
+        }
+
+        const result = files
             .filter(file =>
+                file &&
                 file.type === "file" &&
                 /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name)
             )
@@ -113,18 +156,40 @@ async function loadFolder(folder) {
                 path: file.path,
                 download_url: file.download_url,
                 html_url: file.html_url
-            }));
+            }))
+            .sort((a, b) =>
+                a.name.localeCompare(
+                    b.name,
+                    undefined,
+                    { numeric: true, sensitivity: "base" }
+                )
+            );
+
+        console.log(
+            `GitHub ${folder}: ${result.length} current image(s)`
+        );
+
+        return result;
+
     } catch (error) {
         console.log(`Could not load ${folder}:`, error);
         return null;
     }
 }
 
+/* =====================================================
+   LOCAL LIST CACHE
+===================================================== */
+
 function saveListData() {
     try {
         localStorage.setItem(
             LIST_CACHE_KEY,
-            JSON.stringify({ chords, lyrics })
+            JSON.stringify({
+                chords,
+                lyrics,
+                updatedAt: Date.now()
+            })
         );
     } catch (error) {
         console.log("List storage error:", error);
@@ -134,35 +199,52 @@ function saveListData() {
 function loadListData() {
     try {
         const saved = localStorage.getItem(LIST_CACHE_KEY);
+
         if (!saved) return false;
 
         const data = JSON.parse(saved);
 
-        if (Array.isArray(data.chords)) chords = data.chords;
-        if (Array.isArray(data.lyrics)) lyrics = data.lyrics;
+        if (Array.isArray(data.chords)) {
+            chords = data.chords;
+        }
+
+        if (Array.isArray(data.lyrics)) {
+            lyrics = data.lyrics;
+        }
 
         return true;
+
     } catch (error) {
         console.log("Offline list error:", error);
+
         chords = [];
         lyrics = [];
+
         return false;
     }
 }
 
+/* =====================================================
+   IMAGE CACHE
+===================================================== */
+
 async function getImageCache() {
     if (!("caches" in window)) return null;
+
     return await caches.open(IMAGE_CACHE);
 }
 
 async function getCachedImageURL(url) {
     const cache = await getImageCache();
+
     if (!cache) return null;
 
     const response = await cache.match(url);
+
     if (!response) return null;
 
     const blob = await response.blob();
+
     return URL.createObjectURL(blob);
 }
 
@@ -170,19 +252,25 @@ async function downloadAndCacheImage(url) {
     const cache = await getImageCache();
 
     if (!cache) {
-        const response = await fetch(url, { cache: "no-store" });
+        const response = await fetch(url, {
+            cache: "no-store"
+        });
 
         if (!response.ok) {
             throw new Error("Image download failed");
         }
 
-        return URL.createObjectURL(await response.blob());
+        return URL.createObjectURL(
+            await response.blob()
+        );
     }
 
     const existing = await cache.match(url);
 
     if (existing) {
-        return URL.createObjectURL(await existing.blob());
+        return URL.createObjectURL(
+            await existing.blob()
+        );
     }
 
     if (!navigator.onLine) {
@@ -198,46 +286,91 @@ async function downloadAndCacheImage(url) {
         throw new Error("Image download failed");
     }
 
-    await cache.put(url, response.clone());
+    await cache.put(
+        url,
+        response.clone()
+    );
 
-    return URL.createObjectURL(await response.blob());
+    return URL.createObjectURL(
+        await response.blob()
+    );
 }
 
-async function loadData() {
+/* =====================================================
+   LOAD DATA
+===================================================== */
+
+async function loadData(forceRefresh = false) {
+
     chordList.innerHTML =
         `<div class="empty">🎸 Loading library...</div>`;
 
     lyricList.innerHTML =
         `<div class="empty">🎤 Loading library...</div>`;
 
+    /*
+     * Show cached data first only for offline/startup display.
+     */
     loadListData();
 
     renderChords(chords);
     renderLyrics(lyrics);
 
-    if (!navigator.onLine) return;
+    /*
+     * If offline, cached list is the only source.
+     */
+    if (!navigator.onLine) {
+        return;
+    }
 
+    /*
+     * ALWAYS fetch the current GitHub folders when online.
+     *
+     * This is the important fix:
+     * If an old image was deleted, it disappears.
+     * If a new image was uploaded, it appears.
+     */
     const [newChords, newLyrics] = await Promise.all([
         loadFolder("chords"),
         loadFolder("lyrics")
     ]);
 
-    if (newChords !== null) chords = newChords;
-    if (newLyrics !== null) lyrics = newLyrics;
+    /*
+     * If GitHub successfully returned a folder,
+     * replace the old cached list completely.
+     */
+    if (newChords !== null) {
+        chords = newChords;
+    }
 
+    if (newLyrics !== null) {
+        lyrics = newLyrics;
+    }
+
+    /*
+     * Save ONLY the latest GitHub lists.
+     */
     saveListData();
 
     renderChords(chords);
     renderLyrics(lyrics);
 }
 
+/* =====================================================
+   SONG ITEM
+===================================================== */
+
 function createSongItem(file, type) {
+
     const item = document.createElement("div");
     item.className = "song-item";
 
     const icon = document.createElement("div");
     icon.className = "song-icon";
-    icon.textContent = type === "chord" ? "🎸" : "🎤";
+    icon.textContent =
+        type === "chord"
+            ? "🎸"
+            : "🎤";
 
     const details = document.createElement("div");
     details.className = "song-details";
@@ -248,6 +381,7 @@ function createSongItem(file, type) {
 
     const sub = document.createElement("div");
     sub.className = "song-type";
+
     sub.textContent =
         type === "chord"
             ? "Chord Sheet • Tap to open"
@@ -265,61 +399,97 @@ function createSongItem(file, type) {
     item.appendChild(arrow);
 
     item.addEventListener("click", () => {
-        openViewer(imageURL(file), cleanName(file.name));
+        openViewer(
+            imageURL(file),
+            cleanName(file.name)
+        );
     });
 
     return item;
 }
 
+/* =====================================================
+   RENDER
+===================================================== */
+
 function renderChords(list) {
-    document.getElementById("chordCount").textContent = list.length;
+
+    document.getElementById("chordCount").textContent =
+        list.length;
+
     chordList.innerHTML = "";
 
     if (!list.length) {
+
         chordList.innerHTML = `
             <div class="empty">
                 <div class="empty-icon">🎸</div>
                 No chord sheets available.
             </div>
         `;
+
         return;
     }
 
     list.forEach(file => {
-        chordList.appendChild(createSongItem(file, "chord"));
+        chordList.appendChild(
+            createSongItem(file, "chord")
+        );
     });
 }
 
 function renderLyrics(list) {
-    document.getElementById("lyricCount").textContent = list.length;
+
+    document.getElementById("lyricCount").textContent =
+        list.length;
+
     lyricList.innerHTML = "";
 
     if (!list.length) {
+
         lyricList.innerHTML = `
             <div class="empty">
                 <div class="empty-icon">🎤</div>
                 No lyrics available.
             </div>
         `;
+
         return;
     }
 
     list.forEach(file => {
-        lyricList.appendChild(createSongItem(file, "lyric"));
+        lyricList.appendChild(
+            createSongItem(file, "lyric")
+        );
     });
 }
 
+/* =====================================================
+   VIEWER STATE
+===================================================== */
+
 function setViewerState(state) {
-    viewerLoading.classList.toggle("hidden", state !== "loading");
-    viewerError.classList.toggle("hidden", state !== "error");
+
+    viewerLoading.classList.toggle(
+        "hidden",
+        state !== "loading"
+    );
+
+    viewerError.classList.toggle(
+        "hidden",
+        state !== "error"
+    );
 
     if (state === "loading") {
-        viewerStatus.textContent = navigator.onLine
-            ? "Downloading & saving this image..."
-            : "Checking saved image...";
+
+        viewerStatus.textContent =
+            navigator.onLine
+                ? "Downloading & saving this image..."
+                : "Checking saved image...";
     }
 
     if (state === "ready") {
+
         viewerStatus.textContent =
             zoomScale > 1
                 ? `${zoomScale.toFixed(2)}x • Saved on this device`
@@ -327,29 +497,44 @@ function setViewerState(state) {
     }
 
     if (state === "error") {
-        viewerStatus.textContent = "Not saved on this device";
+
+        viewerStatus.textContent =
+            "Not saved on this device";
     }
 }
 
+/* =====================================================
+   ZOOM
+===================================================== */
+
 function clamp(value, min, max) {
-    return Math.min(Math.max(value, min), max);
+    return Math.min(
+        Math.max(value, min),
+        max
+    );
 }
 
 function applyZoom() {
+
     /*
-     * Quality fix:
-     * At 1x the image is rendered WITHOUT a CSS transform.
-     * CSS transforms can make fine text look softer because the
-     * browser has to resample the transformed bitmap.
+     * 1x = NO transform.
+     * This helps preserve sharpness.
      */
     if (zoomScale === 1) {
-        viewerImage.style.transform = "none";
+
+        viewerImage.style.transform =
+            "none";
+
     } else {
+
         viewerImage.style.transform =
             `translate3d(${zoomX}px, ${zoomY}px, 0) scale(${zoomScale})`;
     }
 
-    viewerImage.classList.toggle("zoomed", zoomScale > 1);
+    viewerImage.classList.toggle(
+        "zoomed",
+        zoomScale > 1
+    );
 
     if (
         !viewerLoading.classList.contains("hidden") ||
@@ -358,7 +543,8 @@ function applyZoom() {
         return;
     }
 
-    if (typeof viewerStatus !== "undefined" && viewerStatus) {
+    if (viewerStatus) {
+
         viewerStatus.textContent =
             zoomScale > 1
                 ? `${zoomScale.toFixed(2)}x • Saved on this device`
@@ -367,33 +553,60 @@ function applyZoom() {
 }
 
 function setZoom(newScale) {
+
     const oldScale = zoomScale;
 
-    zoomScale = clamp(newScale, MIN_ZOOM, MAX_ZOOM);
+    zoomScale = clamp(
+        newScale,
+        MIN_ZOOM,
+        MAX_ZOOM
+    );
 
     if (zoomScale === 1) {
+
         zoomX = 0;
         zoomY = 0;
+
     } else {
-        const ratio = zoomScale / oldScale;
+
+        const ratio =
+            zoomScale / oldScale;
 
         zoomX *= ratio;
         zoomY *= ratio;
 
         const maxMoveX =
-            Math.max(0, (viewerBody.clientWidth * (zoomScale - 1)) / 2);
+            Math.max(
+                0,
+                (viewerBody.clientWidth *
+                    (zoomScale - 1)) / 2
+            );
 
         const maxMoveY =
-            Math.max(0, (viewerBody.clientHeight * (zoomScale - 1)) / 2);
+            Math.max(
+                0,
+                (viewerBody.clientHeight *
+                    (zoomScale - 1)) / 2
+            );
 
-        zoomX = clamp(zoomX, -maxMoveX, maxMoveX);
-        zoomY = clamp(zoomY, -maxMoveY, maxMoveY);
+        zoomX = clamp(
+            zoomX,
+            -maxMoveX,
+            maxMoveX
+        );
+
+        zoomY = clamp(
+            zoomY,
+            -maxMoveY,
+            maxMoveY
+        );
     }
 
     applyZoom();
 }
 
 function resetZoom() {
+
     zoomScale = 1;
     zoomX = 0;
     zoomY = 0;
@@ -401,77 +614,273 @@ function resetZoom() {
     isDragging = false;
     pinchActive = false;
 
-    viewerImage.style.transform = "none";
+    viewerImage.style.transform =
+        "none";
 
-    viewerImage.classList.remove("zoomed");
-}
-
-function getTouchDistance(touch1, touch2) {
-    const dx = touch1.clientX - touch2.clientX;
-    const dy = touch1.clientY - touch2.clientY;
-    return Math.sqrt(dx * dx + dy * dy);
+    viewerImage.classList.remove(
+        "zoomed"
+    );
 }
 
 /* =====================================================
-   PINCH ZOOM
+   TOUCH
 ===================================================== */
 
-viewerImage.addEventListener("touchstart", event => {
-    if (event.touches.length === 2) {
+function getTouchDistance(touch1, touch2) {
+
+    const dx =
+        touch1.clientX -
+        touch2.clientX;
+
+    const dy =
+        touch1.clientY -
+        touch2.clientY;
+
+    return Math.sqrt(
+        dx * dx + dy * dy
+    );
+}
+
+viewerImage.addEventListener(
+    "touchstart",
+    event => {
+
+        if (event.touches.length === 2) {
+
+            event.preventDefault();
+
+            pinchActive = true;
+            isDragging = false;
+
+            pinchStartDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+            pinchStartZoom =
+                zoomScale;
+
+            return;
+        }
+
+        if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            event.preventDefault();
+
+            isDragging = true;
+
+            dragStartX =
+                event.touches[0].clientX;
+
+            dragStartY =
+                event.touches[0].clientY;
+
+            dragOriginX = zoomX;
+            dragOriginY = zoomY;
+        }
+
+    },
+    { passive: false }
+);
+
+viewerImage.addEventListener(
+    "touchmove",
+    event => {
+
+        if (
+            pinchActive &&
+            event.touches.length === 2
+        ) {
+
+            event.preventDefault();
+
+            const currentDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+            if (
+                pinchStartDistance <= 0
+            ) return;
+
+            const ratio =
+                currentDistance /
+                pinchStartDistance;
+
+            setZoom(
+                pinchStartZoom * ratio
+            );
+
+            return;
+        }
+
+        if (
+            isDragging &&
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            event.preventDefault();
+
+            const dx =
+                event.touches[0].clientX -
+                dragStartX;
+
+            const dy =
+                event.touches[0].clientY -
+                dragStartY;
+
+            const maxMoveX =
+                Math.max(
+                    0,
+                    (viewerBody.clientWidth *
+                        (zoomScale - 1)) / 2
+                );
+
+            const maxMoveY =
+                Math.max(
+                    0,
+                    (viewerBody.clientHeight *
+                        (zoomScale - 1)) / 2
+                );
+
+            zoomX = clamp(
+                dragOriginX + dx,
+                -maxMoveX,
+                maxMoveX
+            );
+
+            zoomY = clamp(
+                dragOriginY + dy,
+                -maxMoveY,
+                maxMoveY
+            );
+
+            applyZoom();
+        }
+
+    },
+    { passive: false }
+);
+
+viewerImage.addEventListener(
+    "touchend",
+    event => {
+
+        if (event.touches.length < 2) {
+            pinchActive = false;
+        }
+
+        if (event.touches.length === 0) {
+            isDragging = false;
+        }
+
+    },
+    { passive: false }
+);
+
+/* =====================================================
+   NO DOUBLE TAP
+===================================================== */
+
+viewerImage.addEventListener(
+    "dblclick",
+    event => {
+        event.preventDefault();
+    },
+    { passive: false }
+);
+
+/* =====================================================
+   PC WHEEL ZOOM
+===================================================== */
+
+viewerBody.addEventListener(
+    "wheel",
+    event => {
+
+        if (
+            viewer.classList.contains("hidden") ||
+            viewerImage.classList.contains("hidden")
+        ) {
+            return;
+        }
+
         event.preventDefault();
 
-        pinchActive = true;
-        isDragging = false;
+        const step =
+            event.deltaY < 0
+                ? 0.125
+                : -0.125;
 
-        pinchStartDistance = getTouchDistance(
-            event.touches[0],
-            event.touches[1]
+        setZoom(
+            zoomScale + step
         );
 
-        pinchStartZoom = zoomScale;
-        return;
-    }
+    },
+    { passive: false }
+);
 
-    if (event.touches.length === 1 && zoomScale > 1) {
+/* =====================================================
+   PC DRAG
+===================================================== */
+
+viewerImage.addEventListener(
+    "mousedown",
+    event => {
+
+        if (zoomScale <= 1) return;
+
         event.preventDefault();
 
         isDragging = true;
 
-        dragStartX = event.touches[0].clientX;
-        dragStartY = event.touches[0].clientY;
+        dragStartX =
+            event.clientX;
+
+        dragStartY =
+            event.clientY;
 
         dragOriginX = zoomX;
         dragOriginY = zoomY;
     }
-}, { passive: false });
+);
 
-viewerImage.addEventListener("touchmove", event => {
-    if (pinchActive && event.touches.length === 2) {
-        event.preventDefault();
+window.addEventListener(
+    "mousemove",
+    event => {
 
-        const currentDistance = getTouchDistance(
-            event.touches[0],
-            event.touches[1]
-        );
+        if (
+            !isDragging ||
+            zoomScale <= 1
+        ) return;
 
-        if (pinchStartDistance <= 0) return;
+        const dx =
+            event.clientX -
+            dragStartX;
 
-        const ratio = currentDistance / pinchStartDistance;
-        setZoom(pinchStartZoom * ratio);
-        return;
-    }
-
-    if (isDragging && event.touches.length === 1 && zoomScale > 1) {
-        event.preventDefault();
-
-        const dx = event.touches[0].clientX - dragStartX;
-        const dy = event.touches[0].clientY - dragStartY;
+        const dy =
+            event.clientY -
+            dragStartY;
 
         const maxMoveX =
-            Math.max(0, (viewerBody.clientWidth * (zoomScale - 1)) / 2);
+            Math.max(
+                0,
+                (viewerBody.clientWidth *
+                    (zoomScale - 1)) / 2
+            );
 
         const maxMoveY =
-            Math.max(0, (viewerBody.clientHeight * (zoomScale - 1)) / 2);
+            Math.max(
+                0,
+                (viewerBody.clientHeight *
+                    (zoomScale - 1)) / 2
+            );
 
         zoomX = clamp(
             dragOriginX + dx,
@@ -487,283 +896,354 @@ viewerImage.addEventListener("touchmove", event => {
 
         applyZoom();
     }
-}, { passive: false });
+);
 
-viewerImage.addEventListener("touchend", event => {
-    if (event.touches.length < 2) {
-        pinchActive = false;
-    }
-
-    if (event.touches.length === 0) {
+window.addEventListener(
+    "mouseup",
+    () => {
         isDragging = false;
     }
-}, { passive: false });
+);
 
 /* =====================================================
-   NO DOUBLE-TAP ZOOM
+   IMAGE QUALITY
 ===================================================== */
-
-viewerImage.addEventListener("dblclick", event => {
-    event.preventDefault();
-}, { passive: false });
-
-/* =====================================================
-   PC WHEEL ZOOM
-===================================================== */
-
-viewerBody.addEventListener("wheel", event => {
-    if (
-        viewer.classList.contains("hidden") ||
-        viewerImage.classList.contains("hidden")
-    ) {
-        return;
-    }
-
-    event.preventDefault();
-
-    const step = event.deltaY < 0 ? 0.125 : -0.125;
-    setZoom(zoomScale + step);
-}, { passive: false });
-
-/* =====================================================
-   PC DRAG
-===================================================== */
-
-viewerImage.addEventListener("mousedown", event => {
-    if (zoomScale <= 1) return;
-
-    event.preventDefault();
-
-    isDragging = true;
-
-    dragStartX = event.clientX;
-    dragStartY = event.clientY;
-
-    dragOriginX = zoomX;
-    dragOriginY = zoomY;
-});
-
-window.addEventListener("mousemove", event => {
-    if (!isDragging || zoomScale <= 1) return;
-
-    const dx = event.clientX - dragStartX;
-    const dy = event.clientY - dragStartY;
-
-    const maxMoveX =
-        Math.max(0, (viewerBody.clientWidth * (zoomScale - 1)) / 2);
-
-    const maxMoveY =
-        Math.max(0, (viewerBody.clientHeight * (zoomScale - 1)) / 2);
-
-    zoomX = clamp(
-        dragOriginX + dx,
-        -maxMoveX,
-        maxMoveX
-    );
-
-    zoomY = clamp(
-        dragOriginY + dy,
-        -maxMoveY,
-        maxMoveY
-    );
-
-    applyZoom();
-});
-
-window.addEventListener("mouseup", () => {
-    isDragging = false;
-});
 
 function prepareInitialImageRender() {
+
     /*
-     * Make the sheet use the available screen height at 1x.
-     * This is especially important for tall lyrics/chord sheets:
-     * fitting by a smaller inherited width/height can make the text
-     * look unnecessarily tiny and soft.
-     *
-     * The original image bytes are still used; no canvas resize or
-     * JPEG recompression is performed.
+     * Original image is used directly.
+     * No canvas.
+     * No compression.
+     * No resizing.
      */
     viewerImage.style.width = "auto";
     viewerImage.style.height = "100dvh";
+
     viewerImage.style.maxWidth = "100vw";
     viewerImage.style.maxHeight = "100dvh";
+
     viewerImage.style.objectFit = "contain";
-    viewerImage.style.imageRendering = "auto";
-    viewerImage.style.transform = "none";
+
+    viewerImage.style.imageRendering =
+        "auto";
+
+    viewerImage.style.transform =
+        "none";
 }
 
 async function waitForImageDecode() {
+
     try {
+
         if (viewerImage.decode) {
             await viewerImage.decode();
         }
+
     } catch (error) {
-        // decode() can fail in some browsers even when the image is usable.
+        console.log(
+            "Image decode notice:",
+            error
+        );
     }
 }
 
+/* =====================================================
+   OPEN VIEWER
+===================================================== */
+
 async function openViewer(image, title) {
+
     if (!image) return;
 
-    if (viewerTitle) viewerTitle.textContent = title;
+    if (viewerTitle) {
+        viewerTitle.textContent =
+            title;
+    }
 
     viewer.classList.remove("hidden");
-    viewer.setAttribute("aria-hidden", "false");
 
-    document.body.style.overflow = "hidden";
+    viewer.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    document.body.style.overflow =
+        "hidden";
 
     resetZoom();
+
     prepareInitialImageRender();
 
     viewerBody.scrollTop = 0;
     viewerBody.scrollLeft = 0;
 
     viewerImage.removeAttribute("src");
-    viewerImage.classList.add("hidden");
+
+    viewerImage.classList.add(
+        "hidden"
+    );
 
     setViewerState("loading");
 
     try {
-        const cachedURL = await getCachedImageURL(image);
+
+        /*
+         * First check if this exact image
+         * was previously saved on device.
+         */
+        const cachedURL =
+            await getCachedImageURL(
+                image
+            );
 
         if (cachedURL) {
-            viewerImage.src = cachedURL;
+
+            viewerImage.src =
+                cachedURL;
+
             await waitForImageDecode();
-            viewerImage.classList.remove("hidden");
+
+            viewerImage.classList.remove(
+                "hidden"
+            );
+
             applyZoom();
-            setViewerState("ready");
+
+            setViewerState(
+                "ready"
+            );
+
             return;
         }
 
+        /*
+         * Not cached.
+         * Need internet.
+         */
         if (!navigator.onLine) {
-            throw new Error("OFFLINE_IMAGE_NOT_SAVED");
+
+            throw new Error(
+                "OFFLINE_IMAGE_NOT_SAVED"
+            );
         }
 
-        const localURL = await downloadAndCacheImage(image);
+        /*
+         * Download original image and save it.
+         */
+        const localURL =
+            await downloadAndCacheImage(
+                image
+            );
 
-        viewerImage.src = localURL;
+        viewerImage.src =
+            localURL;
+
         await waitForImageDecode();
-        viewerImage.classList.remove("hidden");
+
+        viewerImage.classList.remove(
+            "hidden"
+        );
+
         applyZoom();
 
-        setViewerState("ready");
+        setViewerState(
+            "ready"
+        );
+
     } catch (error) {
-        console.log("Viewer error:", error);
 
-        viewerImage.removeAttribute("src");
-        viewerImage.classList.add("hidden");
+        console.log(
+            "Viewer error:",
+            error
+        );
 
-        setViewerState("error");
+        viewerImage.removeAttribute(
+            "src"
+        );
+
+        viewerImage.classList.add(
+            "hidden"
+        );
+
+        setViewerState(
+            "error"
+        );
     }
 }
 
-async function closeImageViewer() {
-    if (document.fullscreenElement === viewer) {
-        try { await document.exitFullscreen(); } catch (error) { console.log("Exit fullscreen error:", error); }
-    }
-    viewer.classList.add("hidden");
-    viewer.setAttribute("aria-hidden", "true");
+/* =====================================================
+   CLOSE VIEWER
+===================================================== */
 
-    const oldURL = viewerImage.src;
+function closeImageViewer() {
 
-    viewerImage.removeAttribute("src");
-    viewerImage.classList.add("hidden");
+    viewer.classList.add(
+        "hidden"
+    );
+
+    viewer.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+    const oldURL =
+        viewerImage.src;
+
+    viewerImage.removeAttribute(
+        "src"
+    );
+
+    viewerImage.classList.add(
+        "hidden"
+    );
 
     resetZoom();
 
-    document.body.style.overflow = "";
+    document.body.style.overflow =
+        "";
 
-    if (oldURL && oldURL.startsWith("blob:")) {
-        setTimeout(() => URL.revokeObjectURL(oldURL), 0);
-    }
-}
-
-if (closeViewer) closeViewer.addEventListener("click", closeImageViewer);
-
-async function toggleViewerFullscreen() {
-    try {
-        if (!document.fullscreenElement) {
-            if (viewer.requestFullscreen) {
-                await viewer.requestFullscreen();
-            }
-        } else {
-            await document.exitFullscreen();
-        }
-    } catch (error) {
-        console.log("Fullscreen error:", error);
-    }
-}
-
-function updateFullscreenButton() {
-    if (!fullscreenViewer) return;
-    const active = document.fullscreenElement === viewer;
-    fullscreenViewer.textContent = active ? "⛶" : "⛶";
-    fullscreenViewer.setAttribute("aria-label", active ? "Exit full screen" : "Full screen");
-    fullscreenViewer.title = active ? "Exit full screen" : "Full screen";
-}
-
-if (fullscreenViewer) fullscreenViewer.addEventListener("click", event => {
-    event.stopPropagation();
-    toggleViewerFullscreen();
-});
-
-document.addEventListener("fullscreenchange", updateFullscreenButton);
-updateFullscreenButton();
-
-viewer.addEventListener("click", event => {
     if (
-        event.target === viewer ||
-        event.target === viewerBody
+        oldURL &&
+        oldURL.startsWith("blob:")
     ) {
-        closeImageViewer();
+
+        setTimeout(
+            () => URL.revokeObjectURL(oldURL),
+            0
+        );
     }
-});
+}
 
-document.addEventListener("keydown", event => {
-    if (event.key === "Escape") {
-        closeImageViewer();
+if (closeViewer) {
+
+    closeViewer.addEventListener(
+        "click",
+        closeImageViewer
+    );
+}
+
+viewer.addEventListener(
+    "click",
+    event => {
+
+        if (
+            event.target === viewer ||
+            event.target === viewerBody
+        ) {
+
+            closeImageViewer();
+        }
     }
-});
+);
 
-chordSearch.addEventListener("input", event => {
-    const text = event.target.value.toLowerCase().trim();
+/* =====================================================
+   ESCAPE
+===================================================== */
 
-    renderChords(
-        chords.filter(file =>
-            cleanName(file.name)
+document.addEventListener(
+    "keydown",
+    event => {
+
+        if (event.key === "Escape") {
+            closeImageViewer();
+        }
+
+    }
+);
+
+/* =====================================================
+   SEARCH
+===================================================== */
+
+chordSearch.addEventListener(
+    "input",
+    event => {
+
+        const text =
+            event.target.value
                 .toLowerCase()
-                .includes(text)
-        )
-    );
-});
+                .trim();
 
-lyricSearch.addEventListener("input", event => {
-    const text = event.target.value.toLowerCase().trim();
+        renderChords(
+            chords.filter(file =>
+                cleanName(file.name)
+                    .toLowerCase()
+                    .includes(text)
+            )
+        );
+    }
+);
 
-    renderLyrics(
-        lyrics.filter(file =>
-            cleanName(file.name)
+lyricSearch.addEventListener(
+    "input",
+    event => {
+
+        const text =
+            event.target.value
                 .toLowerCase()
-                .includes(text)
-        )
-    );
-});
+                .trim();
 
-chordsBtn.addEventListener("click", () => {
-    chordsSection.classList.remove("hidden");
-    lyricsSection.classList.add("hidden");
+        renderLyrics(
+            lyrics.filter(file =>
+                cleanName(file.name)
+                    .toLowerCase()
+                    .includes(text)
+            )
+        );
+    }
+);
 
-    chordsBtn.classList.add("active");
-    lyricsBtn.classList.remove("active");
-});
+/* =====================================================
+   TABS
+===================================================== */
 
-lyricsBtn.addEventListener("click", () => {
-    lyricsSection.classList.remove("hidden");
-    chordsSection.classList.add("hidden");
+chordsBtn.addEventListener(
+    "click",
+    () => {
 
-    lyricsBtn.classList.add("active");
-    chordsBtn.classList.remove("active");
-});
+        chordsSection.classList.remove(
+            "hidden"
+        );
+
+        lyricsSection.classList.add(
+            "hidden"
+        );
+
+        chordsBtn.classList.add(
+            "active"
+        );
+
+        lyricsBtn.classList.remove(
+            "active"
+        );
+    }
+);
+
+lyricsBtn.addEventListener(
+    "click",
+    () => {
+
+        lyricsSection.classList.remove(
+            "hidden"
+        );
+
+        chordsSection.classList.add(
+            "hidden"
+        );
+
+        lyricsBtn.classList.add(
+            "active"
+        );
+
+        chordsBtn.classList.remove(
+            "active"
+        );
+    }
+);
+
+/* =====================================================
+   START
+===================================================== */
 
 loadData();
