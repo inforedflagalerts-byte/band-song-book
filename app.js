@@ -1,70 +1,56 @@
+(() => {
+"use strict";
+
 const USERNAME = "inforedflagalerts-byte";
 const REPO = "band-song-book";
 const BRANCH = "main";
-
 const API = `https://api.github.com/repos/${USERNAME}/${REPO}/contents`;
-const LIST_CACHE_KEY = "bandSongBookData_v8";
-const IMAGE_CACHE = "song-book-images-v5";
+
+const LIST_CACHE_KEY = "bandSongBookData_v10";
+const IMAGE_CACHE = "song-book-images-v10";
 
 let chords = [];
 let lyrics = [];
 
-/* ---------- DOM ---------- */
-const chordsBtn = document.getElementById("chordsBtn");
-const lyricsBtn = document.getElementById("lyricsBtn");
+const $ = id => document.getElementById(id);
 
-const chordsSection = document.getElementById("chordsSection");
-const lyricsSection = document.getElementById("lyricsSection");
+const chordsBtn = $("chordsBtn");
+const lyricsBtn = $("lyricsBtn");
+const chordsSection = $("chordsSection");
+const lyricsSection = $("lyricsSection") || $("lyricSection");
+const chordList = $("chordList");
+const lyricList = $("lyricList");
+const chordSearch = $("chordSearch");
+const lyricSearch = $("lyricSearch");
 
-const chordList = document.getElementById("chordList");
-const lyricList = document.getElementById("lyricList");
+const viewer = $("viewer");
+const viewerBody = $("viewerBody");
+const viewerImage = $("viewerImage");
+const viewerLoading = $("viewerLoading");
+const viewerError = $("viewerError");
+const viewerTitle = $("viewerTitle");
+const viewerStatus = $("viewerStatus");
+const closeViewer = $("closeViewer");
+const fullscreenViewer = $("fullscreenViewer");
+const status = $("status");
 
-const chordSearch = document.getElementById("chordSearch");
-const lyricSearch = document.getElementById("lyricSearch");
+let currentObjectURL = null;
+let zoomScale = 1;
+let zoomX = 0;
+let zoomY = 0;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 3;
 
-const viewer = document.getElementById("viewer");
-const viewerBody = document.getElementById("viewerBody");
-const viewerImage = document.getElementById("viewerImage");
-const viewerLoading = document.getElementById("viewerLoading");
-const viewerError = document.getElementById("viewerError");
-const viewerTitle = document.getElementById("viewerTitle");
-const viewerStatus = document.getElementById("viewerStatus");
-const closeViewer = document.getElementById("closeViewer");
-const status = document.getElementById("status");
-
-/* ---------- service worker ---------- */
-if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" })
-            .then(reg => reg.update().catch(() => {}))
-            .catch(() => {});
-    });
-}
-
-/* ---------- status ---------- */
-function updateStatus() {
+function updateStatus(text) {
     if (!status) return;
-    status.textContent = navigator.onLine ? "● Online" : "● Offline Ready";
-    status.style.color = navigator.onLine ? "#8ed89b" : "#c59dd9";
+    status.textContent = text || (navigator.onLine ? "● Online" : "● Offline Ready");
 }
-updateStatus();
-window.addEventListener("online", () => {
-    updateStatus();
-    loadData(true);
-});
-window.addEventListener("offline", updateStatus);
 
-/* ---------- helpers ---------- */
 function cleanName(name = "") {
-    return name
-        .replace(/\.[^/.]+$/, "")
+    return name.replace(/\.[^/.]+$/, "")
         .replace(/[_-]+/g, " ")
         .replace(/\s+/g, " ")
         .trim();
-}
-
-function imageURL(file) {
-    return file.download_url || file.raw_url || "";
 }
 
 function isImageFile(file) {
@@ -73,7 +59,13 @@ function isImageFile(file) {
         /\.(jpg|jpeg|png|webp|gif|bmp|avif)$/i.test(file.name || "");
 }
 
-/* ---------- GitHub ---------- */
+function imageURL(file) {
+    return file.download_url ||
+        `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${BRANCH}/${file.path}`;
+}
+
+/* ---------- GitHub library ---------- */
+
 async function loadFolder(folder) {
     const url = `${API}/${encodeURIComponent(folder)}?ref=${encodeURIComponent(BRANCH)}&_=${Date.now()}`;
 
@@ -87,13 +79,13 @@ async function loadFolder(folder) {
     });
 
     if (!response.ok) {
-        throw new Error(`GitHub ${folder}: HTTP ${response.status}`);
+        throw new Error(`${folder}: GitHub HTTP ${response.status}`);
     }
 
     const data = await response.json();
 
     if (!Array.isArray(data)) {
-        throw new Error(`GitHub ${folder}: unexpected response`);
+        throw new Error(`${folder}: GitHub did not return a folder list`);
     }
 
     return data
@@ -102,7 +94,7 @@ async function loadFolder(folder) {
             name: file.name,
             path: file.path,
             download_url: file.download_url,
-            raw_url: `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${BRANCH}/${file.path}`
+            html_url: file.html_url
         }))
         .sort((a, b) => a.name.localeCompare(b.name, undefined, {
             numeric: true,
@@ -110,14 +102,9 @@ async function loadFolder(folder) {
         }));
 }
 
-/* ---------- local list cache ---------- */
 function saveListData() {
     try {
-        localStorage.setItem(LIST_CACHE_KEY, JSON.stringify({
-            chords,
-            lyrics,
-            savedAt: Date.now()
-        }));
+        localStorage.setItem(LIST_CACHE_KEY, JSON.stringify({ chords, lyrics }));
     } catch (_) {}
 }
 
@@ -125,12 +112,9 @@ function loadListData() {
     try {
         const saved = localStorage.getItem(LIST_CACHE_KEY);
         if (!saved) return false;
-
         const data = JSON.parse(saved);
-
         chords = Array.isArray(data.chords) ? data.chords : [];
         lyrics = Array.isArray(data.lyrics) ? data.lyrics : [];
-
         return true;
     } catch (_) {
         chords = [];
@@ -139,54 +123,55 @@ function loadListData() {
     }
 }
 
+async function loadData() {
+    if (!chordList || !lyricList) {
+        updateStatus("● App HTML error");
+        return;
+    }
+
+    // Show old saved list immediately, then replace it with GitHub's current list.
+    loadListData();
+    renderChords(chords);
+    renderLyrics(lyrics);
+
+    if (!navigator.onLine) {
+        updateStatus("● Offline Ready");
+        return;
+    }
+
+    updateStatus("● Updating…");
+
+    try {
+        const [newChords, newLyrics] = await Promise.all([
+            loadFolder("chords"),
+            loadFolder("lyrics")
+        ]);
+
+        // Replace completely: new GitHub files appear, deleted files disappear.
+        chords = newChords;
+        lyrics = newLyrics;
+
+        saveListData();
+        renderChords(chords);
+        renderLyrics(lyrics);
+
+        updateStatus(`● Online • ${chords.length + lyrics.length} songs`);
+    } catch (error) {
+        console.error("Song library update failed:", error);
+        // Keep whatever cached list is available.
+        renderChords(chords);
+        renderLyrics(lyrics);
+        updateStatus(navigator.onLine ? "● Online • Cached list" : "● Offline Ready");
+    }
+}
+
 /* ---------- render ---------- */
-function renderChords(list) {
-    if (!chordList) return;
-
-    const count = document.getElementById("chordCount");
-    if (count) count.textContent = list.length;
-
-    chordList.innerHTML = "";
-
-    if (!list.length) {
-        chordList.innerHTML = `
-            <div class="empty">
-                <div class="empty-icon">🎸</div>
-                No chord sheets available.
-            </div>`;
-        return;
-    }
-
-    list.forEach(file => {
-        chordList.appendChild(createSongItem(file, "chord"));
-    });
-}
-
-function renderLyrics(list) {
-    if (!lyricList) return;
-
-    const count = document.getElementById("lyricCount");
-    if (count) count.textContent = list.length;
-
-    lyricList.innerHTML = "";
-
-    if (!list.length) {
-        lyricList.innerHTML = `
-            <div class="empty">
-                <div class="empty-icon">🎤</div>
-                No lyrics available.
-            </div>`;
-        return;
-    }
-
-    list.forEach(file => {
-        lyricList.appendChild(createSongItem(file, "lyric"));
-    });
-}
 
 function createSongItem(file, type) {
     const item = document.createElement("div");
     item.className = "song-item";
+    item.setAttribute("role", "button");
+    item.tabIndex = 0;
 
     const icon = document.createElement("div");
     icon.className = "song-icon";
@@ -212,72 +197,56 @@ function createSongItem(file, type) {
     details.append(name, sub);
     item.append(icon, details, arrow);
 
-    item.addEventListener("click", () => {
-        openViewer(imageURL(file), cleanName(file.name));
+    const open = () => openViewer(imageURL(file), cleanName(file.name));
+    item.addEventListener("click", open);
+    item.addEventListener("keydown", e => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            open();
+        }
     });
 
     return item;
 }
 
-/* ---------- data loading ---------- */
-async function loadData(forceFresh = false) {
-    if (!forceFresh) {
-        loadListData();
-        renderChords(chords);
-        renderLyrics(lyrics);
-    }
+function renderChords(list) {
+    if (!chordList) return;
+    const count = $("chordCount");
+    if (count) count.textContent = list.length;
+    chordList.innerHTML = "";
 
-    if (!navigator.onLine) {
+    if (!list.length) {
+        chordList.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">🎸</div>
+                No chord sheets available.
+            </div>`;
         return;
     }
 
-    try {
-        const [newChords, newLyrics] = await Promise.all([
-            loadFolder("chords"),
-            loadFolder("lyrics")
-        ]);
+    list.forEach(file => chordList.appendChild(createSongItem(file, "chord")));
+}
 
-        // IMPORTANT:
-        // Replace the old arrays completely.
-        // This makes deleted GitHub files disappear
-        // and newly uploaded files appear automatically.
-        chords = newChords;
-        lyrics = newLyrics;
+function renderLyrics(list) {
+    if (!lyricList) return;
+    const count = $("lyricCount");
+    if (count) count.textContent = list.length;
+    lyricList.innerHTML = "";
 
-        saveListData();
-        renderChords(chords);
-        renderLyrics(lyrics);
-    } catch (error) {
-        console.error("Library update failed:", error);
-
-        // Keep cached data if GitHub is temporarily unavailable.
-        if (!chords.length && !lyrics.length) {
-            renderChords(chords);
-            renderLyrics(lyrics);
-        }
+    if (!list.length) {
+        lyricList.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">🎤</div>
+                No lyrics available.
+            </div>`;
+        return;
     }
+
+    list.forEach(file => lyricList.appendChild(createSongItem(file, "lyric")));
 }
 
-/* ---------- search ---------- */
-if (chordSearch) {
-    chordSearch.addEventListener("input", event => {
-        const text = event.target.value.toLowerCase().trim();
-        renderChords(chords.filter(file =>
-            cleanName(file.name).toLowerCase().includes(text)
-        ));
-    });
-}
+/* ---------- tabs/search ---------- */
 
-if (lyricSearch) {
-    lyricSearch.addEventListener("input", event => {
-        const text = event.target.value.toLowerCase().trim();
-        renderLyrics(lyrics.filter(file =>
-            cleanName(file.name).toLowerCase().includes(text)
-        ));
-    });
-}
-
-/* ---------- tabs ---------- */
 if (chordsBtn) {
     chordsBtn.addEventListener("click", () => {
         chordsSection?.classList.remove("hidden");
@@ -296,7 +265,18 @@ if (lyricsBtn) {
     });
 }
 
+chordSearch?.addEventListener("input", e => {
+    const q = e.target.value.toLowerCase().trim();
+    renderChords(chords.filter(f => cleanName(f.name).toLowerCase().includes(q)));
+});
+
+lyricSearch?.addEventListener("input", e => {
+    const q = e.target.value.toLowerCase().trim();
+    renderLyrics(lyrics.filter(f => cleanName(f.name).toLowerCase().includes(q)));
+});
+
 /* ---------- image cache ---------- */
+
 async function getImageCache() {
     if (!("caches" in window)) return null;
     return caches.open(IMAGE_CACHE);
@@ -307,37 +287,28 @@ async function downloadAndCacheImage(url) {
 
     if (cache) {
         const existing = await cache.match(url);
-        if (existing) {
-            return URL.createObjectURL(await existing.blob());
-        }
+        if (existing) return URL.createObjectURL(await existing.blob());
     }
 
-    if (!navigator.onLine) {
-        throw new Error("OFFLINE_IMAGE_NOT_SAVED");
-    }
+    if (!navigator.onLine) throw new Error("OFFLINE_IMAGE_NOT_SAVED");
 
     const response = await fetch(url, {
+        method: "GET",
         cache: "no-store",
         mode: "cors"
     });
 
     if (!response.ok) {
-        throw new Error("Image download failed");
+        throw new Error(`Image HTTP ${response.status}`);
     }
 
-    if (cache) {
-        await cache.put(url, response.clone());
-    }
+    // Store the original response bytes. No canvas, no resizing, no compression.
+    if (cache) await cache.put(url, response.clone());
 
     return URL.createObjectURL(await response.blob());
 }
 
-/* ---------- viewer / zoom ---------- */
-let zoomScale = 1;
-let zoomX = 0;
-let zoomY = 0;
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 3;
+/* ---------- viewer ---------- */
 
 function applyZoom() {
     if (!viewerImage) return;
@@ -354,69 +325,97 @@ function resetZoom() {
 
 function setZoom(value) {
     zoomScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
-
     if (zoomScale === 1) {
         zoomX = 0;
         zoomY = 0;
     }
-
     applyZoom();
+}
+
+function setViewerState(state) {
+    viewerLoading?.classList.toggle("hidden", state !== "loading");
+    viewerError?.classList.toggle("hidden", state !== "error");
+
+    if (state === "loading" && viewerStatus) {
+        viewerStatus.textContent = navigator.onLine
+            ? "Downloading & saving this image…"
+            : "Checking saved image…";
+    }
+    if (state === "ready" && viewerStatus) {
+        viewerStatus.textContent = zoomScale > 1
+            ? `${zoomScale.toFixed(2)}x • Original image`
+            : "Original image • Saved offline";
+    }
+    if (state === "error" && viewerStatus) {
+        viewerStatus.textContent = "Not saved on this device";
+    }
 }
 
 async function openViewer(url, title) {
     if (!viewer || !viewerImage || !url) return;
+
+    if (currentObjectURL) {
+        URL.revokeObjectURL(currentObjectURL);
+        currentObjectURL = null;
+    }
 
     viewer.classList.remove("hidden");
     viewer.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
 
     if (viewerTitle) viewerTitle.textContent = title || "Song";
-    if (viewerStatus) viewerStatus.textContent = "Loading…";
-
-    viewerLoading?.classList.remove("hidden");
-    viewerError?.classList.add("hidden");
     viewerImage.classList.add("hidden");
     viewerImage.removeAttribute("src");
-
     resetZoom();
+    setViewerState("loading");
 
     try {
         const objectURL = await downloadAndCacheImage(url);
+        currentObjectURL = objectURL;
 
         viewerImage.onload = () => {
             viewerLoading?.classList.add("hidden");
+            viewerError?.classList.add("hidden");
             viewerImage.classList.remove("hidden");
-            if (viewerStatus) viewerStatus.textContent = "Ready";
+            setViewerState("ready");
         };
 
         viewerImage.onerror = () => {
             viewerLoading?.classList.add("hidden");
             viewerError?.classList.remove("hidden");
-            if (viewerStatus) viewerStatus.textContent = "Unable to display";
-            URL.revokeObjectURL(objectURL);
+            viewerImage.classList.add("hidden");
+            if (currentObjectURL) URL.revokeObjectURL(currentObjectURL);
+            currentObjectURL = null;
         };
 
+        // Blob URL points to the exact downloaded original bytes.
         viewerImage.src = objectURL;
     } catch (error) {
-        viewerLoading?.classList.add("hidden");
-        viewerError?.classList.remove("hidden");
-
-        if (viewerStatus) {
-            viewerStatus.textContent =
-                error.message === "OFFLINE_IMAGE_NOT_SAVED"
-                    ? "Not saved"
-                    : "Error";
+        console.error("Viewer error:", error);
+        setViewerState("error");
+        if (error.message !== "OFFLINE_IMAGE_NOT_SAVED") {
+            viewerError?.querySelector("strong")?.replaceChildren(
+                document.createTextNode("Could not load this image")
+            );
+            viewerError?.querySelector("p")?.replaceChildren(
+                document.createTextNode("Check your internet connection and try again.")
+            );
         }
     }
 }
 
-async function closeImageViewer() {
+function closeImageViewer() {
     if (!viewer) return;
 
-    const oldURL = viewerImage?.src || "";
-
     viewer.classList.add("hidden");
+    viewer.classList.remove("is-fullscreen");
     viewer.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+
+    if (currentObjectURL) {
+        URL.revokeObjectURL(currentObjectURL);
+        currentObjectURL = null;
+    }
 
     if (viewerImage) {
         viewerImage.removeAttribute("src");
@@ -424,69 +423,114 @@ async function closeImageViewer() {
     }
 
     resetZoom();
-    document.body.style.overflow = "";
-
-    if (oldURL.startsWith("blob:")) {
-        setTimeout(() => URL.revokeObjectURL(oldURL), 0);
-    }
-
-    if (document.fullscreenElement) {
-        try {
-            await document.exitFullscreen();
-        } catch (_) {}
-    }
 }
 
 closeViewer?.addEventListener("click", closeImageViewer);
 
-viewer?.addEventListener("click", event => {
-    if (event.target === viewer) closeImageViewer();
+viewer?.addEventListener("click", e => {
+    if (e.target === viewerBody) return;
 });
 
-document.addEventListener("keydown", event => {
-    if (event.key === "Escape" && !viewer?.classList.contains("hidden")) {
-        closeImageViewer();
+document.addEventListener("keydown", e => {
+    if (viewer?.classList.contains("hidden")) return;
+    if (e.key === "Escape") {
+        if (document.fullscreenElement) {
+            document.exitFullscreen?.().catch(() => {});
+        } else {
+            closeImageViewer();
+        }
+    }
+    if (e.key === "+" || e.key === "=") setZoom(zoomScale + .25);
+    if (e.key === "-" || e.key === "_") setZoom(zoomScale - .25);
+    if (e.key === "0") resetZoom();
+});
+
+viewerImage?.addEventListener("wheel", e => {
+    e.preventDefault();
+    setZoom(zoomScale + (e.deltaY < 0 ? .2 : -.2));
+}, { passive: false });
+
+let pinchStart = 0;
+let pinchZoom = 1;
+
+viewerImage?.addEventListener("touchstart", e => {
+    if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinchStart = Math.hypot(dx, dy);
+        pinchZoom = zoomScale;
+    }
+}, { passive: true });
+
+viewerImage?.addEventListener("touchmove", e => {
+    if (e.touches.length !== 2 || !pinchStart) return;
+    e.preventDefault();
+    const dx = e.touches[0].clientX - e.touches[1].clientX;
+    const dy = e.touches[0].clientY - e.touches[1].clientY;
+    const distance = Math.hypot(dx, dy);
+    if (distance > 0) setZoom(pinchZoom * (distance / pinchStart));
+}, { passive: false });
+
+viewerImage?.addEventListener("touchend", () => {
+    pinchStart = 0;
+}, { passive: true });
+
+/* ---------- optional browser fullscreen ---------- */
+
+fullscreenViewer?.addEventListener("click", async () => {
+    try {
+        if (document.fullscreenElement) {
+            await document.exitFullscreen();
+            viewer?.classList.remove("is-fullscreen");
+            fullscreenViewer.textContent = "⛶";
+        } else if (viewer?.requestFullscreen) {
+            await viewer.requestFullscreen();
+            viewer?.classList.add("is-fullscreen");
+            fullscreenViewer.textContent = "⤢";
+        } else {
+            viewer?.classList.toggle("is-fullscreen");
+        }
+    } catch (_) {
+        viewer?.classList.toggle("is-fullscreen");
     }
 });
 
-viewerBody?.addEventListener("wheel", event => {
-    if (viewer?.classList.contains("hidden")) return;
-
-    event.preventDefault();
-    setZoom(zoomScale + (event.deltaY < 0 ? 0.15 : -0.15));
-}, { passive: false });
-
-let drag = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let dragOriginX = 0;
-let dragOriginY = 0;
-
-viewerImage?.addEventListener("mousedown", event => {
-    if (zoomScale <= 1) return;
-
-    drag = true;
-    dragStartX = event.clientX;
-    dragStartY = event.clientY;
-    dragOriginX = zoomX;
-    dragOriginY = zoomY;
-    event.preventDefault();
+document.addEventListener("fullscreenchange", () => {
+    if (!viewer || !fullscreenViewer) return;
+    const full = !!document.fullscreenElement;
+    viewer.classList.toggle("is-fullscreen", full);
+    fullscreenViewer.textContent = full ? "⤢" : "⛶";
 });
 
-window.addEventListener("mousemove", event => {
-    if (!drag) return;
+/* ---------- network + service worker ---------- */
 
-    zoomX = dragOriginX + event.clientX - dragStartX;
-    zoomY = dragOriginY + event.clientY - dragStartY;
-    applyZoom();
+window.addEventListener("online", () => {
+    updateStatus();
+    loadData();
 });
 
-window.addEventListener("mouseup", () => {
-    drag = false;
+window.addEventListener("offline", () => {
+    updateStatus();
 });
 
-/* ---------- start ---------- */
-chordList && (chordList.innerHTML = `<div class="empty">🎸 Loading library...</div>`);
-lyricList && (lyricList.innerHTML = `<div class="empty">🎤 Loading library...</div>`);
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", async () => {
+        try {
+            const reg = await navigator.serviceWorker.register("./sw.js?v=10", {
+                updateViaCache: "none"
+            });
+            await reg.update().catch(() => {});
+        } catch (e) {
+            console.warn("Service worker unavailable:", e);
+        }
+    });
+}
 
-loadData(true);
+/* Start only after DOM is ready. */
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", loadData, { once: true });
+} else {
+    loadData();
+}
+
+})();
