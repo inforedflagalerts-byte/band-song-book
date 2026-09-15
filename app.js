@@ -748,7 +748,7 @@ lyricSearch.addEventListener("input", event => {
                 .includes(text)
         )
     );
-});
+}); 
 
 chordsBtn.addEventListener("click", () => {
     chordsSection.classList.remove("hidden");
