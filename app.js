@@ -1,177 +1,239 @@
-(() => {
-"use strict";
-
 const USERNAME = "inforedflagalerts-byte";
 const REPO = "band-song-book";
 const BRANCH = "main";
+
 const API = `https://api.github.com/repos/${USERNAME}/${REPO}/contents`;
 
-const LIST_CACHE_KEY = "bandSongBookData_v10";
-const IMAGE_CACHE = "song-book-images-v10";
+const LIST_CACHE_KEY = "bandSongBookData_v5";
+const IMAGE_CACHE = "song-book-images-v5";
 
 let chords = [];
 let lyrics = [];
 
-const $ = id => document.getElementById(id);
+const chordsBtn = document.getElementById("chordsBtn");
+const lyricsBtn = document.getElementById("lyricsBtn");
+const chordsSection = document.getElementById("chordsSection");
+const lyricsSection = document.getElementById("lyricsSection");
 
-const chordsBtn = $("chordsBtn");
-const lyricsBtn = $("lyricsBtn");
-const chordsSection = $("chordsSection");
-const lyricsSection = $("lyricsSection") || $("lyricSection");
-const chordList = $("chordList");
-const lyricList = $("lyricList");
-const chordSearch = $("chordSearch");
-const lyricSearch = $("lyricSearch");
+const chordList = document.getElementById("chordList");
+const lyricList = document.getElementById("lyricList");
 
-const viewer = $("viewer");
-const viewerBody = $("viewerBody");
-const viewerImage = $("viewerImage");
-const viewerLoading = $("viewerLoading");
-const viewerError = $("viewerError");
-const viewerTitle = $("viewerTitle");
-const viewerStatus = $("viewerStatus");
-const closeViewer = $("closeViewer");
-const fullscreenViewer = $("fullscreenViewer");
-const status = $("status");
+const chordSearch = document.getElementById("chordSearch");
+const lyricSearch = document.getElementById("lyricSearch");
 
-let currentObjectURL = null;
+const viewer = document.getElementById("viewer");
+const viewerBody = document.getElementById("viewerBody");
+const viewerImage = document.getElementById("viewerImage");
+const viewerTitle = document.getElementById("viewerTitle");
+const viewerStatus = document.getElementById("viewerStatus");
+
+const viewerLoading = document.getElementById("viewerLoading");
+const viewerError = document.getElementById("viewerError");
+const closeViewer = document.getElementById("closeViewer");
+const fullscreenViewer = document.getElementById("fullscreenViewer");
+const status = document.getElementById("status");
+
+/* =====================================================
+   SMALL IMAGE ZOOM
+   Double-tap is OFF.
+   Pinch / wheel: 1x -> 1.25x -> 1.5x -> 1.75x -> 2x
+===================================================== */
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2;
+
 let zoomScale = 1;
 let zoomX = 0;
 let zoomY = 0;
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 3;
 
-function updateStatus(text) {
-    if (!status) return;
-    status.textContent = text || (navigator.onLine ? "● Online" : "● Offline Ready");
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragOriginX = 0;
+let dragOriginY = 0;
+
+let pinchActive = false;
+let pinchStartDistance = 0;
+let pinchStartZoom = 1;
+
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+        navigator.serviceWorker
+            .register("./sw.js")
+            .then(() => console.log("Service Worker registered"))
+            .catch(error => console.log("Service Worker error:", error));
+    });
 }
 
-function cleanName(name = "") {
-    return name.replace(/\.[^/.]+$/, "")
+function updateStatus() {
+    if (navigator.onLine) {
+        status.textContent = "● Online";
+        status.style.color = "#8ed89b";
+    } else {
+        status.textContent = "● Offline Ready";
+        status.style.color = "#c59dd9";
+    }
+}
+
+updateStatus();
+window.addEventListener("online", updateStatus);
+window.addEventListener("offline", updateStatus);
+
+function cleanName(name) {
+    return name
+        .replace(/\.[^/.]+$/, "")
         .replace(/[_-]+/g, " ")
         .replace(/\s+/g, " ")
         .trim();
 }
 
-function isImageFile(file) {
-    return file &&
-        file.type === "file" &&
-        /\.(jpg|jpeg|png|webp|gif|bmp|avif)$/i.test(file.name || "");
-}
-
 function imageURL(file) {
-    return file.download_url ||
-        `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${BRANCH}/${file.path}`;
+    return file.download_url || file.html_url || "";
 }
-
-/* ---------- GitHub library ---------- */
 
 async function loadFolder(folder) {
-    const url = `${API}/${encodeURIComponent(folder)}?ref=${encodeURIComponent(BRANCH)}&_=${Date.now()}`;
+    try {
+        const response = await fetch(`${API}/${folder}?ref=${BRANCH}`, {
+            cache: "no-store"
+        });
 
-    const response = await fetch(url, {
-        method: "GET",
-        cache: "no-store",
-        headers: {
-            "Accept": "application/vnd.github+json",
-            "Cache-Control": "no-cache"
+        if (!response.ok) {
+            throw new Error(`GitHub request failed: ${response.status}`);
         }
-    });
 
-    if (!response.ok) {
-        throw new Error(`${folder}: GitHub HTTP ${response.status}`);
+        const files = await response.json();
+
+        return files
+            .filter(file =>
+                file.type === "file" &&
+                /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name)
+            )
+            .map(file => ({
+                name: file.name,
+                path: file.path,
+                download_url: file.download_url,
+                html_url: file.html_url
+            }));
+    } catch (error) {
+        console.log(`Could not load ${folder}:`, error);
+        return null;
     }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data)) {
-        throw new Error(`${folder}: GitHub did not return a folder list`);
-    }
-
-    return data
-        .filter(isImageFile)
-        .map(file => ({
-            name: file.name,
-            path: file.path,
-            download_url: file.download_url,
-            html_url: file.html_url
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name, undefined, {
-            numeric: true,
-            sensitivity: "base"
-        }));
 }
 
 function saveListData() {
     try {
-        localStorage.setItem(LIST_CACHE_KEY, JSON.stringify({ chords, lyrics }));
-    } catch (_) {}
+        localStorage.setItem(
+            LIST_CACHE_KEY,
+            JSON.stringify({ chords, lyrics })
+        );
+    } catch (error) {
+        console.log("List storage error:", error);
+    }
 }
 
 function loadListData() {
     try {
         const saved = localStorage.getItem(LIST_CACHE_KEY);
         if (!saved) return false;
+
         const data = JSON.parse(saved);
-        chords = Array.isArray(data.chords) ? data.chords : [];
-        lyrics = Array.isArray(data.lyrics) ? data.lyrics : [];
+
+        if (Array.isArray(data.chords)) chords = data.chords;
+        if (Array.isArray(data.lyrics)) lyrics = data.lyrics;
+
         return true;
-    } catch (_) {
+    } catch (error) {
+        console.log("Offline list error:", error);
         chords = [];
         lyrics = [];
         return false;
     }
 }
 
-async function loadData() {
-    if (!chordList || !lyricList) {
-        updateStatus("● App HTML error");
-        return;
+async function getImageCache() {
+    if (!("caches" in window)) return null;
+    return await caches.open(IMAGE_CACHE);
+}
+
+async function getCachedImageURL(url) {
+    const cache = await getImageCache();
+    if (!cache) return null;
+
+    const response = await cache.match(url);
+    if (!response) return null;
+
+    const blob = await response.blob();
+    return URL.createObjectURL(blob);
+}
+
+async function downloadAndCacheImage(url) {
+    const cache = await getImageCache();
+
+    if (!cache) {
+        const response = await fetch(url, { cache: "no-store" });
+
+        if (!response.ok) {
+            throw new Error("Image download failed");
+        }
+
+        return URL.createObjectURL(await response.blob());
     }
 
-    // Show old saved list immediately, then replace it with GitHub's current list.
+    const existing = await cache.match(url);
+
+    if (existing) {
+        return URL.createObjectURL(await existing.blob());
+    }
+
+    if (!navigator.onLine) {
+        throw new Error("OFFLINE_IMAGE_NOT_SAVED");
+    }
+
+    const response = await fetch(url, {
+        cache: "no-store",
+        mode: "cors"
+    });
+
+    if (!response.ok) {
+        throw new Error("Image download failed");
+    }
+
+    await cache.put(url, response.clone());
+
+    return URL.createObjectURL(await response.blob());
+}
+
+async function loadData() {
+    chordList.innerHTML =
+        `<div class="empty">🎸 Loading library...</div>`;
+
+    lyricList.innerHTML =
+        `<div class="empty">🎤 Loading library...</div>`;
+
     loadListData();
+
     renderChords(chords);
     renderLyrics(lyrics);
 
-    if (!navigator.onLine) {
-        updateStatus("● Offline Ready");
-        return;
-    }
+    if (!navigator.onLine) return;
 
-    updateStatus("● Updating…");
+    const [newChords, newLyrics] = await Promise.all([
+        loadFolder("chords"),
+        loadFolder("lyrics")
+    ]);
 
-    try {
-        const [newChords, newLyrics] = await Promise.all([
-            loadFolder("chords"),
-            loadFolder("lyrics")
-        ]);
+    if (newChords !== null) chords = newChords;
+    if (newLyrics !== null) lyrics = newLyrics;
 
-        // Replace completely: new GitHub files appear, deleted files disappear.
-        chords = newChords;
-        lyrics = newLyrics;
+    saveListData();
 
-        saveListData();
-        renderChords(chords);
-        renderLyrics(lyrics);
-
-        updateStatus(`● Online • ${chords.length + lyrics.length} songs`);
-    } catch (error) {
-        console.error("Song library update failed:", error);
-        // Keep whatever cached list is available.
-        renderChords(chords);
-        renderLyrics(lyrics);
-        updateStatus(navigator.onLine ? "● Online • Cached list" : "● Offline Ready");
-    }
+    renderChords(chords);
+    renderLyrics(lyrics);
 }
-
-/* ---------- render ---------- */
 
 function createSongItem(file, type) {
     const item = document.createElement("div");
     item.className = "song-item";
-    item.setAttribute("role", "button");
-    item.tabIndex = 0;
 
     const icon = document.createElement("div");
     icon.className = "song-icon";
@@ -186,33 +248,31 @@ function createSongItem(file, type) {
 
     const sub = document.createElement("div");
     sub.className = "song-type";
-    sub.textContent = type === "chord"
-        ? "Chord Sheet • Tap to open"
-        : "Lyrics • Tap to open";
+    sub.textContent =
+        type === "chord"
+            ? "Chord Sheet • Tap to open"
+            : "Lyrics • Tap to open";
+
+    details.appendChild(name);
+    details.appendChild(sub);
 
     const arrow = document.createElement("div");
     arrow.className = "song-arrow";
     arrow.textContent = "›";
 
-    details.append(name, sub);
-    item.append(icon, details, arrow);
+    item.appendChild(icon);
+    item.appendChild(details);
+    item.appendChild(arrow);
 
-    const open = () => openViewer(imageURL(file), cleanName(file.name));
-    item.addEventListener("click", open);
-    item.addEventListener("keydown", e => {
-        if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            open();
-        }
+    item.addEventListener("click", () => {
+        openViewer(imageURL(file), cleanName(file.name));
     });
 
     return item;
 }
 
 function renderChords(list) {
-    if (!chordList) return;
-    const count = $("chordCount");
-    if (count) count.textContent = list.length;
+    document.getElementById("chordCount").textContent = list.length;
     chordList.innerHTML = "";
 
     if (!list.length) {
@@ -220,17 +280,18 @@ function renderChords(list) {
             <div class="empty">
                 <div class="empty-icon">🎸</div>
                 No chord sheets available.
-            </div>`;
+            </div>
+        `;
         return;
     }
 
-    list.forEach(file => chordList.appendChild(createSongItem(file, "chord")));
+    list.forEach(file => {
+        chordList.appendChild(createSongItem(file, "chord"));
+    });
 }
 
 function renderLyrics(list) {
-    if (!lyricList) return;
-    const count = $("lyricCount");
-    if (count) count.textContent = list.length;
+    document.getElementById("lyricCount").textContent = list.length;
     lyricList.innerHTML = "";
 
     if (!list.length) {
@@ -238,299 +299,471 @@ function renderLyrics(list) {
             <div class="empty">
                 <div class="empty-icon">🎤</div>
                 No lyrics available.
-            </div>`;
+            </div>
+        `;
         return;
     }
 
-    list.forEach(file => lyricList.appendChild(createSongItem(file, "lyric")));
-}
-
-/* ---------- tabs/search ---------- */
-
-if (chordsBtn) {
-    chordsBtn.addEventListener("click", () => {
-        chordsSection?.classList.remove("hidden");
-        lyricsSection?.classList.add("hidden");
-        chordsBtn.classList.add("active");
-        lyricsBtn?.classList.remove("active");
+    list.forEach(file => {
+        lyricList.appendChild(createSongItem(file, "lyric"));
     });
 }
 
-if (lyricsBtn) {
-    lyricsBtn.addEventListener("click", () => {
-        lyricsSection?.classList.remove("hidden");
-        chordsSection?.classList.add("hidden");
-        lyricsBtn.classList.add("active");
-        chordsBtn?.classList.remove("active");
-    });
-}
+function setViewerState(state) {
+    viewerLoading.classList.toggle("hidden", state !== "loading");
+    viewerError.classList.toggle("hidden", state !== "error");
 
-chordSearch?.addEventListener("input", e => {
-    const q = e.target.value.toLowerCase().trim();
-    renderChords(chords.filter(f => cleanName(f.name).toLowerCase().includes(q)));
-});
-
-lyricSearch?.addEventListener("input", e => {
-    const q = e.target.value.toLowerCase().trim();
-    renderLyrics(lyrics.filter(f => cleanName(f.name).toLowerCase().includes(q)));
-});
-
-/* ---------- image cache ---------- */
-
-async function getImageCache() {
-    if (!("caches" in window)) return null;
-    return caches.open(IMAGE_CACHE);
-}
-
-async function downloadAndCacheImage(url) {
-    const cache = await getImageCache();
-
-    if (cache) {
-        const existing = await cache.match(url);
-        if (existing) return URL.createObjectURL(await existing.blob());
+    if (state === "loading") {
+        viewerStatus.textContent = navigator.onLine
+            ? "Downloading & saving this image..."
+            : "Checking saved image...";
     }
 
-    if (!navigator.onLine) throw new Error("OFFLINE_IMAGE_NOT_SAVED");
-
-    const response = await fetch(url, {
-        method: "GET",
-        cache: "no-store",
-        mode: "cors"
-    });
-
-    if (!response.ok) {
-        throw new Error(`Image HTTP ${response.status}`);
+    if (state === "ready") {
+        viewerStatus.textContent =
+            zoomScale > 1
+                ? `${zoomScale.toFixed(2)}x • Saved on this device`
+                : "Saved on this device • Offline ready";
     }
 
-    // Store the original response bytes. No canvas, no resizing, no compression.
-    if (cache) await cache.put(url, response.clone());
-
-    return URL.createObjectURL(await response.blob());
+    if (state === "error") {
+        viewerStatus.textContent = "Not saved on this device";
+    }
 }
 
-/* ---------- viewer ---------- */
+function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+}
 
 function applyZoom() {
-    if (!viewerImage) return;
-    viewerImage.style.transform =
-        `translate3d(${zoomX}px, ${zoomY}px, 0) scale(${zoomScale})`;
+    /*
+     * Quality fix:
+     * At 1x the image is rendered WITHOUT a CSS transform.
+     * CSS transforms can make fine text look softer because the
+     * browser has to resample the transformed bitmap.
+     */
+    if (zoomScale === 1) {
+        viewerImage.style.transform = "none";
+    } else {
+        viewerImage.style.transform =
+            `translate3d(${zoomX}px, ${zoomY}px, 0) scale(${zoomScale})`;
+    }
+
+    viewerImage.classList.toggle("zoomed", zoomScale > 1);
+
+    if (
+        !viewerLoading.classList.contains("hidden") ||
+        !viewerError.classList.contains("hidden")
+    ) {
+        return;
+    }
+
+    if (typeof viewerStatus !== "undefined" && viewerStatus) {
+        viewerStatus.textContent =
+            zoomScale > 1
+                ? `${zoomScale.toFixed(2)}x • Saved on this device`
+                : "Saved on this device • Offline ready";
+    }
+}
+
+function setZoom(newScale) {
+    const oldScale = zoomScale;
+
+    zoomScale = clamp(newScale, MIN_ZOOM, MAX_ZOOM);
+
+    if (zoomScale === 1) {
+        zoomX = 0;
+        zoomY = 0;
+    } else {
+        const ratio = zoomScale / oldScale;
+
+        zoomX *= ratio;
+        zoomY *= ratio;
+
+        const maxMoveX =
+            Math.max(0, (viewerBody.clientWidth * (zoomScale - 1)) / 2);
+
+        const maxMoveY =
+            Math.max(0, (viewerBody.clientHeight * (zoomScale - 1)) / 2);
+
+        zoomX = clamp(zoomX, -maxMoveX, maxMoveX);
+        zoomY = clamp(zoomY, -maxMoveY, maxMoveY);
+    }
+
+    applyZoom();
 }
 
 function resetZoom() {
     zoomScale = 1;
     zoomX = 0;
     zoomY = 0;
+
+    isDragging = false;
+    pinchActive = false;
+
+    viewerImage.style.transform = "none";
+
+    viewerImage.classList.remove("zoomed");
+}
+
+function getTouchDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+/* =====================================================
+   PINCH ZOOM
+===================================================== */
+
+viewerImage.addEventListener("touchstart", event => {
+    if (event.touches.length === 2) {
+        event.preventDefault();
+
+        pinchActive = true;
+        isDragging = false;
+
+        pinchStartDistance = getTouchDistance(
+            event.touches[0],
+            event.touches[1]
+        );
+
+        pinchStartZoom = zoomScale;
+        return;
+    }
+
+    if (event.touches.length === 1 && zoomScale > 1) {
+        event.preventDefault();
+
+        isDragging = true;
+
+        dragStartX = event.touches[0].clientX;
+        dragStartY = event.touches[0].clientY;
+
+        dragOriginX = zoomX;
+        dragOriginY = zoomY;
+    }
+}, { passive: false });
+
+viewerImage.addEventListener("touchmove", event => {
+    if (pinchActive && event.touches.length === 2) {
+        event.preventDefault();
+
+        const currentDistance = getTouchDistance(
+            event.touches[0],
+            event.touches[1]
+        );
+
+        if (pinchStartDistance <= 0) return;
+
+        const ratio = currentDistance / pinchStartDistance;
+        setZoom(pinchStartZoom * ratio);
+        return;
+    }
+
+    if (isDragging && event.touches.length === 1 && zoomScale > 1) {
+        event.preventDefault();
+
+        const dx = event.touches[0].clientX - dragStartX;
+        const dy = event.touches[0].clientY - dragStartY;
+
+        const maxMoveX =
+            Math.max(0, (viewerBody.clientWidth * (zoomScale - 1)) / 2);
+
+        const maxMoveY =
+            Math.max(0, (viewerBody.clientHeight * (zoomScale - 1)) / 2);
+
+        zoomX = clamp(
+            dragOriginX + dx,
+            -maxMoveX,
+            maxMoveX
+        );
+
+        zoomY = clamp(
+            dragOriginY + dy,
+            -maxMoveY,
+            maxMoveY
+        );
+
+        applyZoom();
+    }
+}, { passive: false });
+
+viewerImage.addEventListener("touchend", event => {
+    if (event.touches.length < 2) {
+        pinchActive = false;
+    }
+
+    if (event.touches.length === 0) {
+        isDragging = false;
+    }
+}, { passive: false });
+
+/* =====================================================
+   NO DOUBLE-TAP ZOOM
+===================================================== */
+
+viewerImage.addEventListener("dblclick", event => {
+    event.preventDefault();
+}, { passive: false });
+
+/* =====================================================
+   PC WHEEL ZOOM
+===================================================== */
+
+viewerBody.addEventListener("wheel", event => {
+    if (
+        viewer.classList.contains("hidden") ||
+        viewerImage.classList.contains("hidden")
+    ) {
+        return;
+    }
+
+    event.preventDefault();
+
+    const step = event.deltaY < 0 ? 0.125 : -0.125;
+    setZoom(zoomScale + step);
+}, { passive: false });
+
+/* =====================================================
+   PC DRAG
+===================================================== */
+
+viewerImage.addEventListener("mousedown", event => {
+    if (zoomScale <= 1) return;
+
+    event.preventDefault();
+
+    isDragging = true;
+
+    dragStartX = event.clientX;
+    dragStartY = event.clientY;
+
+    dragOriginX = zoomX;
+    dragOriginY = zoomY;
+});
+
+window.addEventListener("mousemove", event => {
+    if (!isDragging || zoomScale <= 1) return;
+
+    const dx = event.clientX - dragStartX;
+    const dy = event.clientY - dragStartY;
+
+    const maxMoveX =
+        Math.max(0, (viewerBody.clientWidth * (zoomScale - 1)) / 2);
+
+    const maxMoveY =
+        Math.max(0, (viewerBody.clientHeight * (zoomScale - 1)) / 2);
+
+    zoomX = clamp(
+        dragOriginX + dx,
+        -maxMoveX,
+        maxMoveX
+    );
+
+    zoomY = clamp(
+        dragOriginY + dy,
+        -maxMoveY,
+        maxMoveY
+    );
+
     applyZoom();
+});
+
+window.addEventListener("mouseup", () => {
+    isDragging = false;
+});
+
+function prepareInitialImageRender() {
+    /*
+     * Make the sheet use the available screen height at 1x.
+     * This is especially important for tall lyrics/chord sheets:
+     * fitting by a smaller inherited width/height can make the text
+     * look unnecessarily tiny and soft.
+     *
+     * The original image bytes are still used; no canvas resize or
+     * JPEG recompression is performed.
+     */
+    viewerImage.style.width = "auto";
+    viewerImage.style.height = "100dvh";
+    viewerImage.style.maxWidth = "100vw";
+    viewerImage.style.maxHeight = "100dvh";
+    viewerImage.style.objectFit = "contain";
+    viewerImage.style.imageRendering = "auto";
+    viewerImage.style.transform = "none";
 }
 
-function setZoom(value) {
-    zoomScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
-    if (zoomScale === 1) {
-        zoomX = 0;
-        zoomY = 0;
-    }
-    applyZoom();
-}
-
-function setViewerState(state) {
-    viewerLoading?.classList.toggle("hidden", state !== "loading");
-    viewerError?.classList.toggle("hidden", state !== "error");
-
-    if (state === "loading" && viewerStatus) {
-        viewerStatus.textContent = navigator.onLine
-            ? "Downloading & saving this image…"
-            : "Checking saved image…";
-    }
-    if (state === "ready" && viewerStatus) {
-        viewerStatus.textContent = zoomScale > 1
-            ? `${zoomScale.toFixed(2)}x • Original image`
-            : "Original image • Saved offline";
-    }
-    if (state === "error" && viewerStatus) {
-        viewerStatus.textContent = "Not saved on this device";
+async function waitForImageDecode() {
+    try {
+        if (viewerImage.decode) {
+            await viewerImage.decode();
+        }
+    } catch (error) {
+        // decode() can fail in some browsers even when the image is usable.
     }
 }
 
-async function openViewer(url, title) {
-    if (!viewer || !viewerImage || !url) return;
+async function openViewer(image, title) {
+    if (!image) return;
 
-    if (currentObjectURL) {
-        URL.revokeObjectURL(currentObjectURL);
-        currentObjectURL = null;
-    }
+    if (viewerTitle) viewerTitle.textContent = title;
 
     viewer.classList.remove("hidden");
     viewer.setAttribute("aria-hidden", "false");
+
     document.body.style.overflow = "hidden";
 
-    if (viewerTitle) viewerTitle.textContent = title || "Song";
-    viewerImage.classList.add("hidden");
-    viewerImage.removeAttribute("src");
     resetZoom();
+    prepareInitialImageRender();
+
+    viewerBody.scrollTop = 0;
+    viewerBody.scrollLeft = 0;
+
+    viewerImage.removeAttribute("src");
+    viewerImage.classList.add("hidden");
+
     setViewerState("loading");
 
     try {
-        const objectURL = await downloadAndCacheImage(url);
-        currentObjectURL = objectURL;
+        const cachedURL = await getCachedImageURL(image);
 
-        viewerImage.onload = () => {
-            viewerLoading?.classList.add("hidden");
-            viewerError?.classList.add("hidden");
+        if (cachedURL) {
+            viewerImage.src = cachedURL;
+            await waitForImageDecode();
             viewerImage.classList.remove("hidden");
+            applyZoom();
             setViewerState("ready");
-        };
-
-        viewerImage.onerror = () => {
-            viewerLoading?.classList.add("hidden");
-            viewerError?.classList.remove("hidden");
-            viewerImage.classList.add("hidden");
-            if (currentObjectURL) URL.revokeObjectURL(currentObjectURL);
-            currentObjectURL = null;
-        };
-
-        // Blob URL points to the exact downloaded original bytes.
-        viewerImage.src = objectURL;
-    } catch (error) {
-        console.error("Viewer error:", error);
-        setViewerState("error");
-        if (error.message !== "OFFLINE_IMAGE_NOT_SAVED") {
-            viewerError?.querySelector("strong")?.replaceChildren(
-                document.createTextNode("Could not load this image")
-            );
-            viewerError?.querySelector("p")?.replaceChildren(
-                document.createTextNode("Check your internet connection and try again.")
-            );
+            return;
         }
-    }
-}
 
-function closeImageViewer() {
-    if (!viewer) return;
+        if (!navigator.onLine) {
+            throw new Error("OFFLINE_IMAGE_NOT_SAVED");
+        }
 
-    viewer.classList.add("hidden");
-    viewer.classList.remove("is-fullscreen");
-    viewer.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = "";
+        const localURL = await downloadAndCacheImage(image);
 
-    if (currentObjectURL) {
-        URL.revokeObjectURL(currentObjectURL);
-        currentObjectURL = null;
-    }
+        viewerImage.src = localURL;
+        await waitForImageDecode();
+        viewerImage.classList.remove("hidden");
+        applyZoom();
 
-    if (viewerImage) {
+        setViewerState("ready");
+    } catch (error) {
+        console.log("Viewer error:", error);
+
         viewerImage.removeAttribute("src");
         viewerImage.classList.add("hidden");
+
+        setViewerState("error");
     }
+}
+
+async function closeImageViewer() {
+    if (document.fullscreenElement === viewer) {
+        try { await document.exitFullscreen(); } catch (error) { console.log("Exit fullscreen error:", error); }
+    }
+    viewer.classList.add("hidden");
+    viewer.setAttribute("aria-hidden", "true");
+
+    const oldURL = viewerImage.src;
+
+    viewerImage.removeAttribute("src");
+    viewerImage.classList.add("hidden");
 
     resetZoom();
+
+    document.body.style.overflow = "";
+
+    if (oldURL && oldURL.startsWith("blob:")) {
+        setTimeout(() => URL.revokeObjectURL(oldURL), 0);
+    }
 }
 
-closeViewer?.addEventListener("click", closeImageViewer);
+if (closeViewer) closeViewer.addEventListener("click", closeImageViewer);
 
-viewer?.addEventListener("click", e => {
-    if (e.target === viewerBody) return;
-});
-
-document.addEventListener("keydown", e => {
-    if (viewer?.classList.contains("hidden")) return;
-    if (e.key === "Escape") {
-        if (document.fullscreenElement) {
-            document.exitFullscreen?.().catch(() => {});
-        } else {
-            closeImageViewer();
-        }
-    }
-    if (e.key === "+" || e.key === "=") setZoom(zoomScale + .25);
-    if (e.key === "-" || e.key === "_") setZoom(zoomScale - .25);
-    if (e.key === "0") resetZoom();
-});
-
-viewerImage?.addEventListener("wheel", e => {
-    e.preventDefault();
-    setZoom(zoomScale + (e.deltaY < 0 ? .2 : -.2));
-}, { passive: false });
-
-let pinchStart = 0;
-let pinchZoom = 1;
-
-viewerImage?.addEventListener("touchstart", e => {
-    if (e.touches.length === 2) {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        pinchStart = Math.hypot(dx, dy);
-        pinchZoom = zoomScale;
-    }
-}, { passive: true });
-
-viewerImage?.addEventListener("touchmove", e => {
-    if (e.touches.length !== 2 || !pinchStart) return;
-    e.preventDefault();
-    const dx = e.touches[0].clientX - e.touches[1].clientX;
-    const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const distance = Math.hypot(dx, dy);
-    if (distance > 0) setZoom(pinchZoom * (distance / pinchStart));
-}, { passive: false });
-
-viewerImage?.addEventListener("touchend", () => {
-    pinchStart = 0;
-}, { passive: true });
-
-/* ---------- optional browser fullscreen ---------- */
-
-fullscreenViewer?.addEventListener("click", async () => {
+async function toggleViewerFullscreen() {
     try {
-        if (document.fullscreenElement) {
-            await document.exitFullscreen();
-            viewer?.classList.remove("is-fullscreen");
-            fullscreenViewer.textContent = "⛶";
-        } else if (viewer?.requestFullscreen) {
-            await viewer.requestFullscreen();
-            viewer?.classList.add("is-fullscreen");
-            fullscreenViewer.textContent = "⤢";
+        if (!document.fullscreenElement) {
+            if (viewer.requestFullscreen) {
+                await viewer.requestFullscreen();
+            }
         } else {
-            viewer?.classList.toggle("is-fullscreen");
+            await document.exitFullscreen();
         }
-    } catch (_) {
-        viewer?.classList.toggle("is-fullscreen");
+    } catch (error) {
+        console.log("Fullscreen error:", error);
+    }
+}
+
+function updateFullscreenButton() {
+    if (!fullscreenViewer) return;
+    const active = document.fullscreenElement === viewer;
+    fullscreenViewer.textContent = active ? "⛶" : "⛶";
+    fullscreenViewer.setAttribute("aria-label", active ? "Exit full screen" : "Full screen");
+    fullscreenViewer.title = active ? "Exit full screen" : "Full screen";
+}
+
+if (fullscreenViewer) fullscreenViewer.addEventListener("click", event => {
+    event.stopPropagation();
+    toggleViewerFullscreen();
+});
+
+document.addEventListener("fullscreenchange", updateFullscreenButton);
+updateFullscreenButton();
+
+viewer.addEventListener("click", event => {
+    if (
+        event.target === viewer ||
+        event.target === viewerBody
+    ) {
+        closeImageViewer();
     }
 });
 
-document.addEventListener("fullscreenchange", () => {
-    if (!viewer || !fullscreenViewer) return;
-    const full = !!document.fullscreenElement;
-    viewer.classList.toggle("is-fullscreen", full);
-    fullscreenViewer.textContent = full ? "⤢" : "⛶";
+document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+        closeImageViewer();
+    }
 });
 
-/* ---------- network + service worker ---------- */
+chordSearch.addEventListener("input", event => {
+    const text = event.target.value.toLowerCase().trim();
 
-window.addEventListener("online", () => {
-    updateStatus();
-    loadData();
+    renderChords(
+        chords.filter(file =>
+            cleanName(file.name)
+                .toLowerCase()
+                .includes(text)
+        )
+    );
 });
 
-window.addEventListener("offline", () => {
-    updateStatus();
+lyricSearch.addEventListener("input", event => {
+    const text = event.target.value.toLowerCase().trim();
+
+    renderLyrics(
+        lyrics.filter(file =>
+            cleanName(file.name)
+                .toLowerCase()
+                .includes(text)
+        )
+    );
 });
 
-if ("serviceWorker" in navigator) {
-    window.addEventListener("load", async () => {
-        try {
-            const reg = await navigator.serviceWorker.register("./sw.js?v=10", {
-                updateViaCache: "none"
-            });
-            await reg.update().catch(() => {});
-        } catch (e) {
-            console.warn("Service worker unavailable:", e);
-        }
-    });
-}
+chordsBtn.addEventListener("click", () => {
+    chordsSection.classList.remove("hidden");
+    lyricsSection.classList.add("hidden");
 
-/* Start only after DOM is ready. */
-if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", loadData, { once: true });
-} else {
-    loadData();
-}
+    chordsBtn.classList.add("active");
+    lyricsBtn.classList.remove("active");
+});
 
-})();
+lyricsBtn.addEventListener("click", () => {
+    lyricsSection.classList.remove("hidden");
+    chordsSection.classList.add("hidden");
+
+    lyricsBtn.classList.add("active");
+    chordsBtn.classList.remove("active");
+});
+
+loadData();
