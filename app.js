@@ -10,76 +10,124 @@ const IMAGE_CACHE = "song-book-images-v4";
 let chords = [];
 let lyrics = [];
 
+
+/* =====================================================
+   ELEMENTS
+===================================================== */
+
 const chordsBtn = document.getElementById("chordsBtn");
 const lyricsBtn = document.getElementById("lyricsBtn");
-const chordsSection = document.getElementById("chordsSection");
-const lyricsSection = document.getElementById("lyricsSection");
 
-const chordList = document.getElementById("chordList");
-const lyricList = document.getElementById("lyricList");
+const chordsSection =
+    document.getElementById("chordsSection");
 
-const chordSearch = document.getElementById("chordSearch");
-const lyricSearch = document.getElementById("lyricSearch");
+const lyricsSection =
+    document.getElementById("lyricsSection");
 
-const viewer = document.getElementById("viewer");
-const viewerBody = document.getElementById("viewerBody");
-const viewerImage = document.getElementById("viewerImage");
-const viewerTitle = document.getElementById("viewerTitle");
-const viewerStatus = document.getElementById("viewerStatus");
+const chordList =
+    document.getElementById("chordList");
 
-const viewerLoading = document.getElementById("viewerLoading");
-const viewerError = document.getElementById("viewerError");
+const lyricList =
+    document.getElementById("lyricList");
 
-const closeViewer = document.getElementById("closeViewer");
-const status = document.getElementById("status");
+const chordSearch =
+    document.getElementById("chordSearch");
+
+const lyricSearch =
+    document.getElementById("lyricSearch");
+
+const viewer =
+    document.getElementById("viewer");
+
+const viewerBody =
+    document.getElementById("viewerBody");
+
+const viewerImage =
+    document.getElementById("viewerImage");
+
+const viewerTitle =
+    document.getElementById("viewerTitle");
+
+const viewerStatus =
+    document.getElementById("viewerStatus");
+
+const viewerLoading =
+    document.getElementById("viewerLoading");
+
+const viewerError =
+    document.getElementById("viewerError");
+
+const closeViewer =
+    document.getElementById("closeViewer");
+
+const status =
+    document.getElementById("status");
 
 
-/* =========================================
+/* =====================================================
    SERVICE WORKER
-========================================= */
+===================================================== */
 
 if ("serviceWorker" in navigator) {
+
     window.addEventListener("load", () => {
+
         navigator.serviceWorker
             .register("./sw.js")
             .then(() => {
-                console.log("Service Worker registered");
+                console.log(
+                    "Service Worker registered"
+                );
             })
             .catch(error => {
-                console.log("Service Worker error:", error);
+                console.log(
+                    "Service Worker error:",
+                    error
+                );
             });
+
     });
+
 }
 
 
-/* =========================================
-   ONLINE / OFFLINE STATUS
-========================================= */
+/* =====================================================
+   ONLINE STATUS
+===================================================== */
 
 function updateStatus() {
 
     if (navigator.onLine) {
 
         status.textContent = "● Online";
+
         status.style.color = "#8ed89b";
 
     } else {
 
-        status.textContent = "● Offline Ready";
-        status.style.color = "#c59dd9";
+        status.textContent =
+            "● Offline Ready";
 
+        status.style.color = "#c59dd9";
     }
 }
 
 updateStatus();
 
-window.addEventListener("online", updateStatus);
-window.addEventListener("offline", updateStatus);
+window.addEventListener(
+    "online",
+    updateStatus
+);
+
+window.addEventListener(
+    "offline",
+    updateStatus
+);
 
 
-/* =========================================
-   CLEAN FILE NAME
-========================================= */
+/* =====================================================
+   NAME
+===================================================== */
 
 function cleanName(name) {
 
@@ -88,58 +136,58 @@ function cleanName(name) {
         .replace(/[_-]+/g, " ")
         .replace(/\s+/g, " ")
         .trim();
-
 }
 
 
-/* =========================================
+/* =====================================================
    IMAGE URL
-========================================= */
+===================================================== */
 
 function imageURL(file) {
 
-    return file.download_url || file.html_url || "";
-
+    return file.download_url ||
+        file.html_url ||
+        "";
 }
 
 
-/* =========================================
-   LOAD FOLDER FROM GITHUB
-========================================= */
+/* =====================================================
+   LOAD GITHUB FOLDER
+===================================================== */
 
 async function loadFolder(folder) {
 
     try {
 
-        const response = await fetch(
-            `${API}/${folder}?ref=${BRANCH}`,
-            {
-                cache: "no-store"
-            }
-        );
+        const response =
+            await fetch(
+                `${API}/${folder}?ref=${BRANCH}`,
+                {
+                    cache: "no-store"
+                }
+            );
 
         if (!response.ok) {
 
             throw new Error(
                 `GitHub request failed: ${response.status}`
             );
-
         }
 
-        const files = await response.json();
+        const files =
+            await response.json();
 
         return files
             .filter(file =>
                 file.type === "file" &&
-                /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name)
+                /\.(jpg|jpeg|png|webp|gif)$/i
+                    .test(file.name)
             )
             .map(file => ({
-
                 name: file.name,
                 path: file.path,
                 download_url: file.download_url,
                 html_url: file.html_url
-
             }));
 
     } catch (error) {
@@ -154,11 +202,9 @@ async function loadFolder(folder) {
 }
 
 
-/* =========================================
-   SAVE SONG LIST
-   NOTE:
-   මෙතන image download වෙන්නේ නැහැ.
-========================================= */
+/* =====================================================
+   SAVE LIST DATA
+===================================================== */
 
 function saveListData() {
 
@@ -178,21 +224,22 @@ function saveListData() {
             "List storage error:",
             error
         );
-
     }
 }
 
 
-/* =========================================
-   LOAD SAVED SONG LIST
-========================================= */
+/* =====================================================
+   LOAD LIST DATA
+===================================================== */
 
 function loadListData() {
 
     try {
 
         const saved =
-            localStorage.getItem(LIST_CACHE_KEY);
+            localStorage.getItem(
+                LIST_CACHE_KEY
+            );
 
         if (!saved) {
             return false;
@@ -226,9 +273,9 @@ function loadListData() {
 }
 
 
-/* =========================================
-   OPEN IMAGE CACHE
-========================================= */
+/* =====================================================
+   IMAGE CACHE
+===================================================== */
 
 async function getImageCache() {
 
@@ -236,14 +283,15 @@ async function getImageCache() {
         return null;
     }
 
-    return await caches.open(IMAGE_CACHE);
-
+    return await caches.open(
+        IMAGE_CACHE
+    );
 }
 
 
-/* =========================================
-   CHECK IF IMAGE IS ALREADY SAVED
-========================================= */
+/* =====================================================
+   GET CACHED IMAGE
+===================================================== */
 
 async function getCachedImageURL(url) {
 
@@ -265,23 +313,17 @@ async function getCachedImageURL(url) {
         await response.blob();
 
     return URL.createObjectURL(blob);
-
 }
 
 
-/* =========================================
-   DOWNLOAD + SAVE ONLY CLICKED IMAGE
-========================================= */
+/* =====================================================
+   DOWNLOAD + SAVE IMAGE
+===================================================== */
 
 async function downloadAndCacheImage(url) {
 
     const cache =
         await getImageCache();
-
-
-    /*
-       Browser Cache API unavailable
-    */
 
     if (!cache) {
 
@@ -294,6 +336,7 @@ async function downloadAndCacheImage(url) {
             );
 
         if (!response.ok) {
+
             throw new Error(
                 "Image download failed"
             );
@@ -302,13 +345,13 @@ async function downloadAndCacheImage(url) {
         const blob =
             await response.blob();
 
-        return URL.createObjectURL(blob);
+        return URL.createObjectURL(
+            blob
+        );
     }
 
 
-    /*
-       FIRST CHECK CACHE AGAIN
-    */
+    /* Already saved */
 
     const existing =
         await cache.match(url);
@@ -318,26 +361,23 @@ async function downloadAndCacheImage(url) {
         const blob =
             await existing.blob();
 
-        return URL.createObjectURL(blob);
+        return URL.createObjectURL(
+            blob
+        );
     }
 
 
-    /*
-       IMAGE NOT SAVED
-    */
+    /* Offline */
 
     if (!navigator.onLine) {
 
         throw new Error(
             "OFFLINE_IMAGE_NOT_SAVED"
         );
-
     }
 
 
-    /*
-       DOWNLOAD ONLY NOW
-    */
+    /* Download */
 
     const response =
         await fetch(
@@ -348,19 +388,15 @@ async function downloadAndCacheImage(url) {
             }
         );
 
-
     if (!response.ok) {
 
         throw new Error(
             "Image download failed"
         );
-
     }
 
 
-    /*
-       SAVE IMAGE LOCALLY
-    */
+    /* Save a copy */
 
     const copy =
         response.clone();
@@ -371,66 +407,50 @@ async function downloadAndCacheImage(url) {
     );
 
 
-    /*
-       SHOW IMAGE
-    */
-
     const blob =
         await response.blob();
 
-    return URL.createObjectURL(blob);
-
+    return URL.createObjectURL(
+        blob
+    );
 }
 
 
-/* =========================================
-   LOAD APP
-========================================= */
+/* =====================================================
+   LOAD DATA
+===================================================== */
 
 async function loadData() {
 
     chordList.innerHTML =
-        `<div class="empty">🎸 Loading library...</div>`;
+        `<div class="empty">
+            🎸 Loading library...
+        </div>`;
 
     lyricList.innerHTML =
-        `<div class="empty">🎤 Loading library...</div>`;
+        `<div class="empty">
+            🎤 Loading library...
+        </div>`;
 
-
-    /*
-       FIRST LOAD SAVED LIST
-    */
 
     loadListData();
+
 
     renderChords(chords);
     renderLyrics(lyrics);
 
 
-    /*
-       IF OFFLINE:
-       DO NOT CONTACT GITHUB
-    */
-
     if (!navigator.onLine) {
-
         return;
     }
 
-
-    /*
-       ONLINE:
-       GET ONLY FILE LIST.
-       DO NOT DOWNLOAD IMAGES.
-    */
 
     const [
         newChords,
         newLyrics
     ] = await Promise.all([
-
         loadFolder("chords"),
         loadFolder("lyrics")
-
     ]);
 
 
@@ -438,28 +458,22 @@ async function loadData() {
         chords = newChords;
     }
 
-
     if (newLyrics !== null) {
         lyrics = newLyrics;
     }
 
-
-    /*
-       SAVE ONLY LIST DATA
-    */
 
     saveListData();
 
 
     renderChords(chords);
     renderLyrics(lyrics);
-
 }
 
 
-/* =========================================
-   CREATE SONG LIST ITEM
-========================================= */
+/* =====================================================
+   CREATE SONG ITEM
+===================================================== */
 
 function createSongItem(file, type) {
 
@@ -469,10 +483,6 @@ function createSongItem(file, type) {
     item.className =
         "song-item";
 
-
-    /*
-       ICON
-    */
 
     const icon =
         document.createElement("div");
@@ -485,10 +495,6 @@ function createSongItem(file, type) {
             ? "🎸"
             : "🎤";
 
-
-    /*
-       DETAILS
-    */
 
     const details =
         document.createElement("div");
@@ -523,30 +529,19 @@ function createSongItem(file, type) {
     details.appendChild(sub);
 
 
-    /*
-       ARROW
-    */
-
     const arrow =
         document.createElement("div");
 
     arrow.className =
         "song-arrow";
 
-    arrow.textContent =
-        "›";
+    arrow.textContent = "›";
 
 
     item.appendChild(icon);
     item.appendChild(details);
     item.appendChild(arrow);
 
-
-    /*
-       IMPORTANT:
-       IMAGE DOWNLOAD STARTS ONLY HERE
-       WHEN USER CLICKS.
-    */
 
     item.addEventListener(
         "click",
@@ -562,13 +557,12 @@ function createSongItem(file, type) {
 
 
     return item;
-
 }
 
 
-/* =========================================
+/* =====================================================
    RENDER CHORDS
-========================================= */
+===================================================== */
 
 function renderChords(list) {
 
@@ -584,7 +578,9 @@ function renderChords(list) {
 
         chordList.innerHTML = `
             <div class="empty">
-                <div class="empty-icon">🎸</div>
+                <div class="empty-icon">
+                    🎸
+                </div>
                 No chord sheets available.
             </div>
         `;
@@ -603,13 +599,12 @@ function renderChords(list) {
         );
 
     });
-
 }
 
 
-/* =========================================
+/* =====================================================
    RENDER LYRICS
-========================================= */
+===================================================== */
 
 function renderLyrics(list) {
 
@@ -625,7 +620,9 @@ function renderLyrics(list) {
 
         lyricList.innerHTML = `
             <div class="empty">
-                <div class="empty-icon">🎤</div>
+                <div class="empty-icon">
+                    🎤
+                </div>
                 No lyrics available.
             </div>
         `;
@@ -644,13 +641,12 @@ function renderLyrics(list) {
         );
 
     });
-
 }
 
 
-/* =========================================
+/* =====================================================
    VIEWER STATE
-========================================= */
+===================================================== */
 
 function setViewerState(state) {
 
@@ -671,7 +667,6 @@ function setViewerState(state) {
             navigator.onLine
                 ? "Downloading & saving this image..."
                 : "Checking saved image...";
-
     }
 
 
@@ -679,7 +674,6 @@ function setViewerState(state) {
 
         viewerStatus.textContent =
             "Saved on this device • Offline ready";
-
     }
 
 
@@ -687,15 +681,405 @@ function setViewerState(state) {
 
         viewerStatus.textContent =
             "Not saved on this device";
-
     }
+}
+
+
+/* =====================================================
+   ZOOM SYSTEM
+===================================================== */
+
+let zoomScale = 1;
+
+let zoomX = 0;
+let zoomY = 0;
+
+let startDistance = 0;
+let startScale = 1;
+
+let startPanX = 0;
+let startPanY = 0;
+
+let startPointerX = 0;
+let startPointerY = 0;
+
+let isDragging = false;
+
+let lastTapTime = 0;
+
+const MIN_ZOOM = 1;
+
+const MAX_ZOOM = 4;
+
+
+/* =====================================================
+   APPLY ZOOM
+===================================================== */
+
+function applyZoom() {
+
+    viewerImage.style.transform =
+        `translate3d(${zoomX}px, ${zoomY}px, 0) scale(${zoomScale})`;
 
 }
 
 
-/* =========================================
-   OPEN IMAGE VIEWER
-========================================= */
+/* =====================================================
+   RESET ZOOM
+===================================================== */
+
+function resetZoom() {
+
+    zoomScale = 1;
+
+    zoomX = 0;
+    zoomY = 0;
+
+    viewerImage.style.transform =
+        "translate3d(0, 0, 0) scale(1)";
+
+    viewerImage.style.maxWidth =
+        "100%";
+
+    viewerImage.style.maxHeight =
+        "100%";
+
+    viewerBody.scrollLeft = 0;
+    viewerBody.scrollTop = 0;
+}
+
+
+/* =====================================================
+   SET ZOOM
+===================================================== */
+
+function setZoom(scale) {
+
+    zoomScale =
+        Math.max(
+            MIN_ZOOM,
+            Math.min(
+                MAX_ZOOM,
+                scale
+            )
+        );
+
+
+    if (zoomScale === 1) {
+
+        zoomX = 0;
+        zoomY = 0;
+
+        viewerImage.style.maxWidth =
+            "100%";
+
+        viewerImage.style.maxHeight =
+            "100%";
+
+    } else {
+
+        /*
+         * Allow image to become larger
+         * than the viewer when zoomed.
+         */
+        viewerImage.style.maxWidth =
+            "none";
+
+        viewerImage.style.maxHeight =
+            "none";
+    }
+
+
+    applyZoom();
+}
+
+
+/* =====================================================
+   DISTANCE BETWEEN TWO TOUCH POINTS
+===================================================== */
+
+function getTouchDistance(touches) {
+
+    const dx =
+        touches[0].clientX -
+        touches[1].clientX;
+
+    const dy =
+        touches[0].clientY -
+        touches[1].clientY;
+
+    return Math.sqrt(
+        dx * dx +
+        dy * dy
+    );
+}
+
+
+/* =====================================================
+   TOUCH START
+===================================================== */
+
+viewerImage.addEventListener(
+    "touchstart",
+    event => {
+
+        if (event.touches.length === 2) {
+
+            event.preventDefault();
+
+            startDistance =
+                getTouchDistance(
+                    event.touches
+                );
+
+            startScale =
+                zoomScale;
+
+            isDragging = false;
+
+            return;
+        }
+
+
+        if (event.touches.length === 1) {
+
+            const now =
+                Date.now();
+
+
+            /*
+             * Double tap
+             */
+            if (
+                now - lastTapTime <
+                300
+            ) {
+
+                event.preventDefault();
+
+
+                if (zoomScale > 1) {
+
+                    resetZoom();
+
+                } else {
+
+                    setZoom(2.2);
+
+                }
+
+
+                lastTapTime = 0;
+
+                return;
+            }
+
+
+            lastTapTime = now;
+
+
+            if (zoomScale > 1) {
+
+                startPointerX =
+                    event.touches[0].clientX;
+
+                startPointerY =
+                    event.touches[0].clientY;
+
+                startPanX = zoomX;
+                startPanY = zoomY;
+
+                isDragging = true;
+
+            }
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =====================================================
+   TOUCH MOVE
+===================================================== */
+
+viewerImage.addEventListener(
+    "touchmove",
+    event => {
+
+        /*
+         * PINCH ZOOM
+         */
+        if (event.touches.length === 2) {
+
+            event.preventDefault();
+
+
+            const distance =
+                getTouchDistance(
+                    event.touches
+                );
+
+
+            if (!startDistance) {
+                return;
+            }
+
+
+            const ratio =
+                distance /
+                startDistance;
+
+
+            setZoom(
+                startScale *
+                ratio
+            );
+
+
+            return;
+        }
+
+
+        /*
+         * DRAG
+         */
+        if (
+            event.touches.length === 1 &&
+            zoomScale > 1 &&
+            isDragging
+        ) {
+
+            event.preventDefault();
+
+
+            const currentX =
+                event.touches[0].clientX;
+
+            const currentY =
+                event.touches[0].clientY;
+
+
+            zoomX =
+                startPanX +
+                (
+                    currentX -
+                    startPointerX
+                );
+
+            zoomY =
+                startPanY +
+                (
+                    currentY -
+                    startPointerY
+                );
+
+
+            applyZoom();
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =====================================================
+   TOUCH END
+===================================================== */
+
+viewerImage.addEventListener(
+    "touchend",
+    event => {
+
+        if (
+            event.touches.length <
+            2
+        ) {
+
+            startDistance = 0;
+        }
+
+
+        if (
+            event.touches.length === 0
+        ) {
+
+            isDragging = false;
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =====================================================
+   MOUSE WHEEL ZOOM
+===================================================== */
+
+viewerBody.addEventListener(
+    "wheel",
+    event => {
+
+        if (!viewerImage.src) {
+            return;
+        }
+
+
+        event.preventDefault();
+
+
+        const amount =
+            event.deltaY < 0
+                ? 0.15
+                : -0.15;
+
+
+        setZoom(
+            zoomScale +
+            amount
+        );
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =====================================================
+   DOUBLE CLICK PC
+===================================================== */
+
+viewerImage.addEventListener(
+    "dblclick",
+    event => {
+
+        event.preventDefault();
+
+
+        if (zoomScale > 1) {
+
+            resetZoom();
+
+        } else {
+
+            setZoom(2.2);
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   OPEN VIEWER
+===================================================== */
 
 async function openViewer(
     image,
@@ -715,6 +1099,7 @@ async function openViewer(
         "hidden"
     );
 
+
     viewer.setAttribute(
         "aria-hidden",
         "false"
@@ -726,11 +1111,16 @@ async function openViewer(
 
 
     viewerBody.scrollTop = 0;
+    viewerBody.scrollLeft = 0;
+
+
+    resetZoom();
 
 
     viewerImage.removeAttribute(
         "src"
     );
+
 
     viewerImage.classList.add(
         "hidden"
@@ -745,21 +1135,14 @@ async function openViewer(
     try {
 
         /*
-           STEP 1
-           CHECK LOCAL CACHE FIRST
-        */
-
+         * FIRST:
+         * Check local saved copy.
+         */
         let cachedURL =
             await getCachedImageURL(
                 image
             );
 
-
-        /*
-           STEP 2
-           ALREADY SAVED
-           NO DOWNLOAD
-        */
 
         if (cachedURL) {
 
@@ -770,6 +1153,8 @@ async function openViewer(
                 "hidden"
             );
 
+            resetZoom();
+
             setViewerState(
                 "ready"
             );
@@ -779,24 +1164,20 @@ async function openViewer(
 
 
         /*
-           STEP 3
-           NOT SAVED
-        */
-
+         * No saved copy + offline.
+         */
         if (!navigator.onLine) {
 
             throw new Error(
                 "OFFLINE_IMAGE_NOT_SAVED"
             );
-
         }
 
 
         /*
-           STEP 4
-           DOWNLOAD + SAVE
-        */
-
+         * Online:
+         * Download and save only this image.
+         */
         const localURL =
             await downloadAndCacheImage(
                 image
@@ -806,14 +1187,14 @@ async function openViewer(
         viewerImage.src =
             localURL;
 
+
         viewerImage.classList.remove(
             "hidden"
         );
 
 
-        /*
-           NOW IT IS SAVED
-        */
+        resetZoom();
+
 
         setViewerState(
             "ready"
@@ -832,6 +1213,7 @@ async function openViewer(
             "src"
         );
 
+
         viewerImage.classList.add(
             "hidden"
         );
@@ -840,21 +1222,20 @@ async function openViewer(
         setViewerState(
             "error"
         );
-
     }
-
 }
 
 
-/* =========================================
+/* =====================================================
    CLOSE VIEWER
-========================================= */
+===================================================== */
 
 function closeImageViewer() {
 
     viewer.classList.add(
         "hidden"
     );
+
 
     viewer.setAttribute(
         "aria-hidden",
@@ -870,18 +1251,18 @@ function closeImageViewer() {
         "src"
     );
 
+
     viewerImage.classList.add(
         "hidden"
     );
 
 
+    resetZoom();
+
+
     document.body.style.overflow =
         "";
 
-
-    /*
-       Release temporary blob URL
-    */
 
     if (
         oldURL &&
@@ -890,17 +1271,21 @@ function closeImageViewer() {
 
         setTimeout(
             () => {
+
                 URL.revokeObjectURL(
                     oldURL
                 );
+
             },
             0
         );
-
     }
-
 }
 
+
+/* =====================================================
+   CLOSE BUTTON
+===================================================== */
 
 closeViewer.addEventListener(
     "click",
@@ -908,9 +1293,9 @@ closeViewer.addEventListener(
 );
 
 
-/*
-   Click outside image = close
-*/
+/* =====================================================
+   CLICK OUTSIDE VIEWER
+===================================================== */
 
 viewer.addEventListener(
     "click",
@@ -922,34 +1307,34 @@ viewer.addEventListener(
         ) {
 
             closeImageViewer();
-
         }
 
     }
 );
 
 
-/*
-   ESC = close
-*/
+/* =====================================================
+   ESC KEY
+===================================================== */
 
 document.addEventListener(
     "keydown",
     event => {
 
-        if (event.key === "Escape") {
+        if (
+            event.key === "Escape"
+        ) {
 
             closeImageViewer();
-
         }
 
     }
 );
 
 
-/* =========================================
-   CHORD SEARCH
-========================================= */
+/* =====================================================
+   SEARCH CHORDS
+===================================================== */
 
 chordSearch.addEventListener(
     "input",
@@ -962,23 +1347,23 @@ chordSearch.addEventListener(
 
 
         renderChords(
-
             chords.filter(
                 file =>
-                    cleanName(file.name)
-                        .toLowerCase()
-                        .includes(text)
+                    cleanName(
+                        file.name
+                    )
+                    .toLowerCase()
+                    .includes(text)
             )
-
         );
 
     }
 );
 
 
-/* =========================================
-   LYRIC SEARCH
-========================================= */
+/* =====================================================
+   SEARCH LYRICS
+===================================================== */
 
 lyricSearch.addEventListener(
     "input",
@@ -991,23 +1376,23 @@ lyricSearch.addEventListener(
 
 
         renderLyrics(
-
             lyrics.filter(
                 file =>
-                    cleanName(file.name)
-                        .toLowerCase()
-                        .includes(text)
+                    cleanName(
+                        file.name
+                    )
+                    .toLowerCase()
+                    .includes(text)
             )
-
         );
 
     }
 );
 
 
-/* =========================================
+/* =====================================================
    CHORD TAB
-========================================= */
+===================================================== */
 
 chordsBtn.addEventListener(
     "click",
@@ -1029,14 +1414,13 @@ chordsBtn.addEventListener(
         lyricsBtn.classList.remove(
             "active"
         );
-
     }
 );
 
 
-/* =========================================
+/* =====================================================
    LYRICS TAB
-========================================= */
+===================================================== */
 
 lyricsBtn.addEventListener(
     "click",
@@ -1058,13 +1442,12 @@ lyricsBtn.addEventListener(
         chordsBtn.classList.remove(
             "active"
         );
-
     }
 );
 
 
-/* =========================================
-   START APPLICATION
-========================================= */
+/* =====================================================
+   START
+===================================================== */
 
 loadData();
