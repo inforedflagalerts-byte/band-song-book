@@ -1,4 +1,4 @@
-const CACHE_NAME = "band-song-book-v5";
+const CACHE_NAME = "band-song-book-v3";
 
 const APP_FILES = [
     "./",
@@ -8,10 +8,6 @@ const APP_FILES = [
     "./manifest.json"
 ];
 
-
-/* =========================================
-   INSTALL
-========================================= */
 
 self.addEventListener(
     "install",
@@ -37,10 +33,6 @@ self.addEventListener(
 );
 
 
-/* =========================================
-   ACTIVATE
-========================================= */
-
 self.addEventListener(
     "activate",
     event => {
@@ -52,31 +44,16 @@ self.addEventListener(
 
                     return Promise.all(
 
-                        keys.map(key => {
-
-                            /*
-                             * Keep:
-                             * - current app cache
-                             * - manually saved song images
-                             */
-
-                            if (
-                                key === CACHE_NAME ||
-                                key === "song-book-images-v2"
-                            ) {
-
-                                return Promise.resolve();
-
-                            }
-
-                            /*
-                             * Delete every old
-                             * service-worker cache.
-                             */
-
-                            return caches.delete(key);
-
-                        })
+                        keys
+                            .filter(
+                                key =>
+                                    key !== CACHE_NAME &&
+                                    key !== "song-book-images-v2"
+                            )
+                            .map(
+                                key =>
+                                    caches.delete(key)
+                            )
 
                     );
 
@@ -90,10 +67,6 @@ self.addEventListener(
 );
 
 
-/* =========================================
-   FETCH
-========================================= */
-
 self.addEventListener(
     "fetch",
     event => {
@@ -102,60 +75,10 @@ self.addEventListener(
             event.request;
 
 
-        /*
-         * Only handle GET requests.
-         */
-
-        if (
-            request.method !== "GET"
-        ) {
-
+        if (request.method !== "GET") {
             return;
-
         }
 
-
-        const url =
-            new URL(request.url);
-
-
-        /*
-         * =====================================
-         * ALL IMAGE REQUESTS
-         * =====================================
-         *
-         * NEVER automatically cache images.
-         *
-         * Images are saved only by app.js
-         * when the user clicks a song.
-         */
-
-        const isImage =
-            /\.(jpg|jpeg|png|webp|gif)$/i.test(
-                url.pathname
-            );
-
-
-        if (isImage) {
-
-            event.respondWith(
-                fetch(request)
-            );
-
-            return;
-
-        }
-
-
-        /*
-         * =====================================
-         * NORMAL APP FILES
-         * =====================================
-         *
-         * Network first.
-         * If internet is unavailable,
-         * use saved app files.
-         */
 
         event.respondWith(
 
@@ -188,7 +111,6 @@ self.addEventListener(
                     return response;
 
                 })
-
                 .catch(
                     () => {
 
