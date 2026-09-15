@@ -68,14 +68,17 @@
     <small>Band Song Book © 2026</small>
 </footer>
 
-<!-- NORMAL IMAGE VIEWER -->
+<!-- FULL SCREEN IMAGE VIEWER -->
 <div id="viewer" class="viewer hidden" aria-hidden="true">
     <div class="viewer-bar">
         <div>
             <div id="viewerTitle" class="viewer-title">Song</div>
             <div id="viewerStatus" class="viewer-status">Ready</div>
         </div>
-        <button id="closeViewer" class="close" type="button" aria-label="Close">×</button>
+        <div class="viewer-actions">
+            <button id="fullscreenViewer" class="viewer-action" type="button" aria-label="Full screen" title="Full screen">⛶</button>
+            <button id="closeViewer" class="close" type="button" aria-label="Close">×</button>
+        </div>
     </div>
 
     <div class="viewer-body" id="viewerBody">
