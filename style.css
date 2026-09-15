@@ -49,11 +49,6 @@ body {
     overflow-x: hidden;
 }
 
-
-/* ==================================================
-   GENERAL
-================================================== */
-
 .hidden {
     display: none !important;
 }
@@ -78,8 +73,7 @@ body {
 
     border-bottom: 1px solid rgba(255,255,255,.08);
 
-    background:
-        rgba(11,7,19,.72);
+    background: rgba(11,7,19,.72);
 
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
@@ -89,13 +83,11 @@ body {
     z-index: 20;
 }
 
-
 .brand {
     display: flex;
     align-items: center;
     gap: 12px;
 }
-
 
 .brand-icon {
     width: 44px;
@@ -121,7 +113,6 @@ body {
         0 8px 30px rgba(120,50,190,.18);
 }
 
-
 .brand h1 {
     margin: 0;
 
@@ -130,14 +121,12 @@ body {
     letter-spacing: -.4px;
 }
 
-
 .brand p {
     margin: 2px 0 0;
 
     font-size: 12px;
     color: rgba(255,255,255,.52);
 }
-
 
 .online-status {
     font-size: 11px;
@@ -183,7 +172,6 @@ body {
     margin-bottom: 28px;
 }
 
-
 .tab {
     border: 0;
 
@@ -200,10 +188,8 @@ body {
 
     cursor: pointer;
 
-    transition:
-        .2s ease;
+    transition: .2s ease;
 }
-
 
 .tab.active {
     color: white;
@@ -218,7 +204,6 @@ body {
     box-shadow:
         0 8px 25px rgba(100,40,180,.15);
 }
-
 
 .tab:active {
     transform: scale(.98);
@@ -237,7 +222,6 @@ body {
     margin-bottom: 16px;
 }
 
-
 .section-title small {
     color: rgba(255,255,255,.38);
 
@@ -247,14 +231,12 @@ body {
     letter-spacing: 1.5px;
 }
 
-
 .section-title h2 {
     margin: 4px 0 0;
 
     font-size: 26px;
     letter-spacing: -.7px;
 }
-
 
 .section-title > span {
     min-width: 32px;
@@ -290,8 +272,7 @@ body {
 
     border-radius: 15px;
 
-    background:
-        rgba(255,255,255,.045);
+    background: rgba(255,255,255,.045);
 
     border: 1px solid rgba(255,255,255,.08);
 
@@ -299,7 +280,6 @@ body {
 
     transition: .2s ease;
 }
-
 
 .search:focus-within {
     border-color:
@@ -309,12 +289,10 @@ body {
         0 0 0 4px rgba(150,70,255,.07);
 }
 
-
 .search > span {
     font-size: 22px;
     color: rgba(255,255,255,.42);
 }
-
 
 .search input {
     width: 100%;
@@ -328,7 +306,6 @@ body {
 
     font-size: 14px;
 }
-
 
 .search input::placeholder {
     color: rgba(255,255,255,.32);
@@ -344,7 +321,6 @@ body {
     flex-direction: column;
     gap: 9px;
 }
-
 
 .song-item {
     display: flex;
@@ -375,7 +351,6 @@ body {
     user-select: none;
 }
 
-
 .song-item:hover {
     transform: translateY(-1px);
 
@@ -386,11 +361,9 @@ body {
         rgba(190,120,255,.18);
 }
 
-
 .song-item:active {
     transform: scale(.985);
 }
-
 
 .song-icon {
     width: 46px;
@@ -409,15 +382,11 @@ body {
     font-size: 21px;
 }
 
-
 .song-details {
     min-width: 0;
-
     flex: 1;
-
     padding: 0 12px;
 }
-
 
 .song-name {
     overflow: hidden;
@@ -429,7 +398,6 @@ body {
     font-weight: 700;
 }
 
-
 .song-type {
     margin-top: 4px;
 
@@ -437,7 +405,6 @@ body {
 
     font-size: 11px;
 }
-
 
 .song-arrow {
     padding: 0 7px;
@@ -462,10 +429,8 @@ body {
     font-size: 13px;
 }
 
-
 .empty-icon {
     margin-bottom: 10px;
-
     font-size: 32px;
 }
 
@@ -488,132 +453,104 @@ footer {
     font-size: 11px;
 }
 
-
 .footer-note {
     margin-bottom: 5px;
-
     color: rgba(220,180,255,.46);
 }
 
 
 /* ==================================================
-   PURE FULLSCREEN IMAGE VIEWER
+   NORMAL IMAGE VIEWER
 ================================================== */
 
 #viewer.viewer {
-    position: fixed !important;
+    position: fixed;
 
-    inset: 0 !important;
+    inset: 0;
 
-    width: 100vw !important;
+    width: 100vw;
 
-    height: 100vh !important;
-    height: 100dvh !important;
+    height: 100vh;
+    height: 100dvh;
 
-    margin: 0 !important;
-    padding: 0 !important;
+    display: flex;
 
-    display: flex !important;
+    align-items: center;
+    justify-content: center;
 
-    align-items: center !important;
-    justify-content: center !important;
+    background: rgba(0,0,0,.94);
 
-    background: #000 !important;
+    z-index: 9999;
 
-    z-index: 999999 !important;
+    overflow: hidden;
 
-    overflow: hidden !important;
-
-    overscroll-behavior: none !important;
-
-    touch-action: none !important;
+    overscroll-behavior: none;
 }
-
 
 #viewer.viewer.hidden {
     display: none !important;
 }
 
-
 #viewer .viewer-body {
-    position: absolute !important;
+    position: relative;
 
-    inset: 0 !important;
+    width: 100%;
+    height: 100%;
 
-    width: 100vw !important;
+    display: flex;
 
-    height: 100vh !important;
-    height: 100dvh !important;
+    align-items: center;
+    justify-content: center;
 
-    min-width: 0 !important;
-    min-height: 0 !important;
+    overflow: hidden;
 
-    margin: 0 !important;
-    padding: 0 !important;
+    background: #000;
 
-    display: flex !important;
+    touch-action: none;
 
-    align-items: center !important;
-    justify-content: center !important;
-
-    background: #000 !important;
-
-    overflow: hidden !important;
-
-    overscroll-behavior: none !important;
-
-    touch-action: none !important;
+    overscroll-behavior: none;
 }
 
 
 /* ==================================================
-   IMAGE
-
-   IMPORTANT:
-   At 1x there is NO transform.
-   Browser renders original image directly.
+   IMAGE QUALITY
 ================================================== */
 
 #viewer #viewerImage {
-    display: block !important;
+    display: block;
 
-    width: auto !important;
-    height: auto !important;
+    width: auto;
+    height: auto;
 
-    max-width: 100vw !important;
+    max-width: 96vw;
 
-    max-height: 100vh !important;
-    max-height: 100dvh !important;
+    max-height: 92vh;
+    max-height: 92dvh;
 
-    margin: 0 !important;
-    padding: 0 !important;
+    object-fit: contain;
 
-    object-fit: contain !important;
+    image-rendering: auto;
 
-    background: #000 !important;
+    background: #000;
 
-    image-rendering: auto !important;
+    user-select: none;
+    -webkit-user-select: none;
 
-    user-select: none !important;
-    -webkit-user-select: none !important;
+    -webkit-user-drag: none;
 
-    -webkit-user-drag: none !important;
+    touch-action: none;
 
-    touch-action: none !important;
-
-    transform-origin: center center !important;
+    transform-origin: center center;
 
     will-change: transform;
 }
 
-
 #viewer #viewerImage.zoomed {
-    cursor: grab !important;
+    cursor: grab;
 }
 
-
 #viewer #viewerImage.zoomed:active {
-    cursor: grabbing !important;
+    cursor: grabbing;
 }
 
 
@@ -644,7 +581,6 @@ footer {
     font-size: 13px;
 }
 
-
 .spinner {
     width: 30px;
     height: 30px;
@@ -653,12 +589,12 @@ footer {
 
     border: 3px solid rgba(255,255,255,.15);
 
-    border-top-color: rgba(220,170,255,.9);
+    border-top-color:
+        rgba(220,170,255,.9);
 
     animation:
         spin .75s linear infinite;
 }
-
 
 @keyframes spin {
     to {
@@ -694,18 +630,14 @@ footer {
     background: #000;
 }
 
-
 .error-icon {
     margin-bottom: 12px;
-
     font-size: 38px;
 }
-
 
 .viewer-error strong {
     font-size: 15px;
 }
-
 
 .viewer-error p {
     max-width: 360px;
@@ -755,11 +687,6 @@ footer {
     }
 
 }
-
-
-/* ==================================================
-   VERY SMALL PHONES
-================================================== */
 
 @media (max-width: 380px) {
 
