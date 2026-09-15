@@ -1,6 +1,7 @@
 /* ==================================================
    BAND SONG BOOK
    CLEAN FINAL APP.JS
+   NORMAL VIEWER - NO BROWSER FULLSCREEN
 ================================================== */
 
 const USERNAME = "inforedflagalerts-byte";
@@ -24,9 +25,9 @@ const IMAGE_CACHE =
 let chords = [];
 let lyrics = [];
 
-let currentBlobURL = null;
-
 let viewerRequest = 0;
+
+let currentBlobURL = null;
 
 
 /* ==================================================
@@ -80,7 +81,7 @@ const viewerError =
 
 
 /* ==================================================
-   VIEWER ZOOM STATE
+   ZOOM STATE
 ================================================== */
 
 let scale = 1;
@@ -90,6 +91,9 @@ let translateY = 0;
 
 let baseWidth = 0;
 let baseHeight = 0;
+
+
+/* Mouse */
 
 let dragging = false;
 
@@ -127,10 +131,12 @@ if ("serviceWorker" in navigator) {
             navigator.serviceWorker
                 .register("./sw.js")
                 .catch(error => {
+
                     console.log(
                         "Service worker error:",
                         error
                     );
+
                 });
 
         }
@@ -140,7 +146,7 @@ if ("serviceWorker" in navigator) {
 
 
 /* ==================================================
-   ONLINE STATUS
+   STATUS
 ================================================== */
 
 function updateStatus() {
@@ -165,7 +171,6 @@ function updateStatus() {
 
 }
 
-
 updateStatus();
 
 window.addEventListener(
@@ -180,7 +185,7 @@ window.addEventListener(
 
 
 /* ==================================================
-   CLEAN SONG NAME
+   CLEAN NAME
 ================================================== */
 
 function cleanName(name) {
@@ -221,6 +226,7 @@ async function loadFolder(folder) {
                 }
             );
 
+
         if (!response.ok) {
 
             throw new Error(
@@ -229,16 +235,22 @@ async function loadFolder(folder) {
 
         }
 
+
         const files =
             await response.json();
+
 
         return files
 
             .filter(file =>
+
                 file.type === "file" &&
+
                 !!file.download_url &&
+
                 /\.(jpg|jpeg|png|webp|gif)$/i
                     .test(file.name)
+
             )
 
             .map(file => ({
@@ -251,6 +263,7 @@ async function loadFolder(folder) {
                     file.download_url
 
             }));
+
 
     } catch (error) {
 
@@ -267,10 +280,7 @@ async function loadFolder(folder) {
 
 
 /* ==================================================
-   SAVE SONG LIST
-   IMPORTANT:
-   This only saves metadata.
-   NO IMAGE IS DOWNLOADED.
+   SAVE LIST
 ================================================== */
 
 function saveListData() {
@@ -298,7 +308,7 @@ function saveListData() {
 
 
 /* ==================================================
-   LOAD SONG LIST OFFLINE
+   LOAD OFFLINE LIST
 ================================================== */
 
 function loadListData() {
@@ -310,24 +320,30 @@ function loadListData() {
                 LIST_CACHE_KEY
             );
 
+
         if (!saved) {
             return false;
         }
 
+
         const data =
             JSON.parse(saved);
+
 
         chords =
             Array.isArray(data.chords)
                 ? data.chords
                 : [];
 
+
         lyrics =
             Array.isArray(data.lyrics)
                 ? data.lyrics
                 : [];
 
+
         return true;
+
 
     } catch (error) {
 
@@ -364,7 +380,7 @@ async function getImageCache() {
 
 
 /* ==================================================
-   GET SAVED IMAGE
+   GET CACHED IMAGE
 ================================================== */
 
 async function getCachedImageURL(url) {
@@ -372,19 +388,24 @@ async function getCachedImageURL(url) {
     const cache =
         await getImageCache();
 
+
     if (!cache) {
         return null;
     }
 
+
     const response =
         await cache.match(url);
+
 
     if (!response) {
         return null;
     }
 
+
     const blob =
         await response.blob();
+
 
     return URL.createObjectURL(
         blob
@@ -394,12 +415,8 @@ async function getCachedImageURL(url) {
 
 
 /* ==================================================
-   DOWNLOAD + SAVE ONLY CLICKED IMAGE
-
-   ORIGINAL BYTES ARE SAVED.
-   NO RESIZE.
-   NO CANVAS.
-   NO JPEG RECOMPRESSION.
+   DOWNLOAD + CACHE
+   ONLY CLICKED IMAGE
 ================================================== */
 
 async function downloadAndCacheImage(url) {
@@ -407,8 +424,6 @@ async function downloadAndCacheImage(url) {
     const cache =
         await getImageCache();
 
-
-    /* Browser without Cache API */
 
     if (!cache) {
 
@@ -420,6 +435,7 @@ async function downloadAndCacheImage(url) {
 
         }
 
+
         const response =
             await fetch(
                 url,
@@ -429,6 +445,7 @@ async function downloadAndCacheImage(url) {
                 }
             );
 
+
         if (!response.ok) {
 
             throw new Error(
@@ -437,8 +454,10 @@ async function downloadAndCacheImage(url) {
 
         }
 
+
         const blob =
             await response.blob();
+
 
         return URL.createObjectURL(
             blob
@@ -447,15 +466,17 @@ async function downloadAndCacheImage(url) {
     }
 
 
-    /* Check again */
+    /* Check cache again */
 
     const existing =
         await cache.match(url);
+
 
     if (existing) {
 
         const blob =
             await existing.blob();
+
 
         return URL.createObjectURL(
             blob
@@ -475,7 +496,7 @@ async function downloadAndCacheImage(url) {
     }
 
 
-    /* Download original */
+    /* Download ORIGINAL */
 
     const response =
         await fetch(
@@ -497,8 +518,10 @@ async function downloadAndCacheImage(url) {
 
 
     /*
-       SAVE ORIGINAL RESPONSE.
-       No modification.
+       Save original response bytes.
+       No resizing.
+       No compression.
+       No canvas.
     */
 
     await cache.put(
@@ -507,12 +530,9 @@ async function downloadAndCacheImage(url) {
     );
 
 
-    /*
-       Display original bytes.
-    */
-
     const blob =
         await response.blob();
+
 
     return URL.createObjectURL(
         blob
@@ -522,7 +542,7 @@ async function downloadAndCacheImage(url) {
 
 
 /* ==================================================
-   LOAD APP
+   LOAD DATA
 ================================================== */
 
 async function loadData() {
@@ -534,22 +554,30 @@ async function loadData() {
         `<div class="empty">🎤 Loading library...</div>`;
 
 
-    /* First load local list */
+    /*
+       First load saved metadata.
+    */
 
     loadListData();
+
 
     renderChords(chords);
     renderLyrics(lyrics);
 
 
-    /* Offline */
+    /*
+       Offline = use saved metadata.
+    */
 
     if (!navigator.onLine) {
         return;
     }
 
 
-    /* Online: ONLY get file names */
+    /*
+       Online = refresh song list.
+       Still NO images downloaded.
+    */
 
     const [
         newChords,
@@ -575,6 +603,7 @@ async function loadData() {
 
     saveListData();
 
+
     renderChords(chords);
     renderLyrics(lyrics);
 
@@ -597,8 +626,6 @@ function createSongItem(
         "song-item";
 
 
-    /* Icon */
-
     const icon =
         document.createElement("div");
 
@@ -610,8 +637,6 @@ function createSongItem(
             ? "🎸"
             : "🎤";
 
-
-    /* Details */
 
     const details =
         document.createElement("div");
@@ -646,8 +671,6 @@ function createSongItem(
     details.appendChild(sub);
 
 
-    /* Arrow */
-
     const arrow =
         document.createElement("div");
 
@@ -665,9 +688,8 @@ function createSongItem(
 
     /*
        IMPORTANT:
-       No image is downloaded here.
-
-       Download begins ONLY after click.
+       Image download starts ONLY here,
+       after user clicks.
     */
 
     item.addEventListener(
@@ -810,10 +832,10 @@ function resetZoom() {
         "zoomed"
     );
 
+
     /*
        IMPORTANT:
-       At 1x there is NO transform.
-       This prevents unnecessary browser resampling.
+       1x = no transform.
     */
 
     viewerImage.style.transform =
@@ -823,17 +845,14 @@ function resetZoom() {
 
 
 /* ==================================================
-   MEASURE ORIGINAL DISPLAYED IMAGE
+   MEASURE IMAGE
 ================================================== */
 
 function measureBaseImage() {
 
-    /*
-       Image is currently scale 1.
-    */
-
     const rect =
         viewerImage.getBoundingClientRect();
+
 
     baseWidth =
         rect.width;
@@ -845,7 +864,7 @@ function measureBaseImage() {
 
 
 /* ==================================================
-   LIMIT PAN
+   CLAMP PAN
 ================================================== */
 
 function clampPan() {
@@ -911,7 +930,7 @@ function clampPan() {
 
 
 /* ==================================================
-   APPLY ZOOM
+   APPLY TRANSFORM
 ================================================== */
 
 function applyTransform() {
@@ -920,10 +939,6 @@ function applyTransform() {
 
 
     if (scale <= 1) {
-
-        /*
-           NO transform at 1x.
-        */
 
         viewerImage.style.transform =
             "none";
@@ -956,9 +971,7 @@ function applyTransform() {
    SET SCALE
 ================================================== */
 
-function setScale(
-    newScale
-) {
+function setScale(newScale) {
 
     scale =
         Math.max(
@@ -984,42 +997,8 @@ function setScale(
 
 
 /* ==================================================
-   FULLSCREEN
-================================================== */
-
-async function requestFullscreen() {
-
-    /*
-       Called immediately from the click chain.
-       Browser may allow fullscreen because
-       it originates from user interaction.
-    */
-
-    try {
-
-        if (
-            !document.fullscreenElement &&
-            viewer.requestFullscreen
-        ) {
-
-            await viewer.requestFullscreen();
-
-        }
-
-    } catch (error) {
-
-        console.log(
-            "Fullscreen unavailable:",
-            error
-        );
-
-    }
-
-}
-
-
-/* ==================================================
    OPEN VIEWER
+   NO FULLSCREEN
 ================================================== */
 
 async function openViewer(image) {
@@ -1034,7 +1013,7 @@ async function openViewer(image) {
 
 
     /*
-       Open UI immediately.
+       Open normal viewer.
     */
 
     viewer.classList.remove(
@@ -1045,6 +1024,7 @@ async function openViewer(image) {
         "aria-hidden",
         "false"
     );
+
 
     document.body.style.overflow =
         "hidden";
@@ -1057,6 +1037,7 @@ async function openViewer(image) {
         "src"
     );
 
+
     viewerImage.classList.add(
         "hidden"
     );
@@ -1067,17 +1048,10 @@ async function openViewer(image) {
     );
 
 
-    /*
-       Ask fullscreen as early as possible.
-    */
-
-    requestFullscreen();
-
-
     try {
 
         /*
-           1. CHECK CACHE
+           Check saved image.
         */
 
         let localURL =
@@ -1092,10 +1066,13 @@ async function openViewer(image) {
 
 
         /*
-           2. SAVED IMAGE
+           Saved image.
         */
 
         if (localURL) {
+
+            currentBlobURL =
+                localURL;
 
             await showViewerImage(
                 localURL,
@@ -1108,7 +1085,7 @@ async function openViewer(image) {
 
 
         /*
-           3. OFFLINE + NOT SAVED
+           Offline + not saved.
         */
 
         if (!navigator.onLine) {
@@ -1121,7 +1098,7 @@ async function openViewer(image) {
 
 
         /*
-           4. DOWNLOAD ONLY NOW
+           Download only now.
         */
 
         localURL =
@@ -1148,6 +1125,10 @@ async function openViewer(image) {
         }
 
 
+        currentBlobURL =
+            localURL;
+
+
         await showViewerImage(
             localURL,
             requestId
@@ -1171,9 +1152,11 @@ async function openViewer(image) {
             "src"
         );
 
+
         viewerImage.classList.add(
             "hidden"
         );
+
 
         setViewerState(
             "error"
@@ -1201,12 +1184,6 @@ async function showViewerImage(
     viewerImage.src =
         url;
 
-
-    /*
-       Wait for browser image decode.
-       This prevents showing a partially
-       decoded image.
-    */
 
     try {
 
@@ -1246,7 +1223,7 @@ async function showViewerImage(
     } catch (error) {
 
         console.log(
-            "Image decode warning:",
+            "Decode warning:",
             error
         );
 
@@ -1261,15 +1238,15 @@ async function showViewerImage(
     resetZoom();
 
 
+    setViewerState(
+        "none"
+    );
+
+
     viewerImage.classList.remove(
         "hidden"
     );
 
-
-    /*
-       Wait one frame so natural
-       dimensions are available.
-    */
 
     requestAnimationFrame(
         () => {
@@ -1286,38 +1263,15 @@ async function showViewerImage(
    CLOSE VIEWER
 ================================================== */
 
-async function closeImageViewer() {
+function closeImageViewer() {
 
     ++viewerRequest;
-
-
-    /*
-       Exit fullscreen.
-    */
-
-    try {
-
-        if (
-            document.fullscreenElement
-        ) {
-
-            await document.exitFullscreen();
-
-        }
-
-    } catch (error) {
-
-        console.log(
-            "Exit fullscreen error:",
-            error
-        );
-
-    }
 
 
     viewer.classList.add(
         "hidden"
     );
+
 
     viewer.setAttribute(
         "aria-hidden",
@@ -1325,16 +1279,10 @@ async function closeImageViewer() {
     );
 
 
-    const oldURL =
-        currentBlobURL;
-
-
-    currentBlobURL = null;
-
-
     viewerImage.removeAttribute(
         "src"
     );
+
 
     viewerImage.classList.add(
         "hidden"
@@ -1349,62 +1297,40 @@ async function closeImageViewer() {
 
 
     if (
-        oldURL &&
-        oldURL.startsWith("blob:")
+        currentBlobURL &&
+        currentBlobURL.startsWith("blob:")
     ) {
 
         URL.revokeObjectURL(
-            oldURL
+            currentBlobURL
         );
 
     }
+
+
+    currentBlobURL = null;
 
 }
 
 
 /* ==================================================
-   FULLSCREEN CHANGE
+   CLICK BACKGROUND TO CLOSE
 ================================================== */
 
-document.addEventListener(
-    "fullscreenchange",
-    () => {
+viewerBody.addEventListener(
+    "click",
+    event => {
 
         /*
-           If browser exits fullscreen,
-           close our viewer too.
-
-           This means pressing browser
-           Escape returns to the song list.
+           Only close if the black background
+           itself was clicked.
         */
 
         if (
-            viewer &&
-            !document.fullscreenElement &&
-            !viewer.classList.contains("hidden")
+            event.target === viewerBody
         ) {
 
-            viewer.classList.add(
-                "hidden"
-            );
-
-            viewer.setAttribute(
-                "aria-hidden",
-                "true"
-            );
-
-            viewerImage.removeAttribute(
-                "src"
-            );
-
-            viewerImage.classList.add(
-                "hidden"
-            );
-
-            resetZoom();
-
-            document.body.style.overflow =
-                "";
+            closeImageViewer();
 
         }
 
@@ -1413,21 +1339,12 @@ document.addEventListener(
 
 
 /* ==================================================
-   PC MOUSE WHEEL ZOOM
+   MOUSE WHEEL ZOOM
 ================================================== */
 
 viewerBody.addEventListener(
     "wheel",
     event => {
-
-        if (
-            viewer.classList.contains(
-                "hidden"
-            )
-        ) {
-            return;
-        }
-
 
         event.preventDefault();
 
@@ -1450,7 +1367,7 @@ viewerBody.addEventListener(
 
 
 /* ==================================================
-   PC MOUSE DRAG
+   MOUSE DRAG
 ================================================== */
 
 viewerImage.addEventListener(
@@ -1527,7 +1444,7 @@ window.addEventListener(
 
 
 /* ==================================================
-   MOBILE TOUCH
+   TOUCH DISTANCE
 ================================================== */
 
 function distanceBetweenTouches(
@@ -1622,7 +1539,7 @@ viewerImage.addEventListener(
 
 
         /*
-           PINCH
+           PINCH ZOOM
         */
 
         if (
@@ -1730,7 +1647,7 @@ viewerImage.addEventListener(
 
 
 /* ==================================================
-   DOUBLE CLICK ZOOM - PC
+   DOUBLE CLICK ZOOM
 ================================================== */
 
 viewerImage.addEventListener(
@@ -1755,7 +1672,7 @@ viewerImage.addEventListener(
 
 
 /* ==================================================
-   ESC KEY
+   ESC
 ================================================== */
 
 document.addEventListener(
@@ -1778,7 +1695,7 @@ document.addEventListener(
 
 
 /* ==================================================
-   SEARCH CHORDS
+   CHORD SEARCH
 ================================================== */
 
 chordSearch.addEventListener(
@@ -1807,7 +1724,7 @@ chordSearch.addEventListener(
 
 
 /* ==================================================
-   SEARCH LYRICS
+   LYRIC SEARCH
 ================================================== */
 
 lyricSearch.addEventListener(
