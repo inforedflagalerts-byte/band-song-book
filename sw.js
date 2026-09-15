@@ -1,4 +1,4 @@
-const CACHE_NAME = "band-song-book-v3";
+const CACHE_NAME = "band-song-book-v4";
 
 const APP_FILES = [
     "./",
@@ -8,6 +8,10 @@ const APP_FILES = [
     "./manifest.json"
 ];
 
+
+/* =========================================
+   INSTALL
+========================================= */
 
 self.addEventListener(
     "install",
@@ -32,6 +36,10 @@ self.addEventListener(
     }
 );
 
+
+/* =========================================
+   ACTIVATE
+========================================= */
 
 self.addEventListener(
     "activate",
@@ -67,6 +75,10 @@ self.addEventListener(
 );
 
 
+/* =========================================
+   FETCH
+========================================= */
+
 self.addEventListener(
     "fetch",
     event => {
@@ -74,11 +86,46 @@ self.addEventListener(
         const request =
             event.request;
 
-
         if (request.method !== "GET") {
             return;
         }
 
+
+        const url =
+            new URL(request.url);
+
+
+        /*
+         * GitHub image files must NOT be
+         * automatically cached by service worker.
+         *
+         * They are cached only when the user
+         * clicks the song.
+         */
+
+        const isGitHubImage =
+            url.hostname === "raw.githubusercontent.com" &&
+            /\.(jpg|jpeg|png|webp)$/i.test(
+                url.pathname
+            );
+
+
+        if (isGitHubImage) {
+
+            event.respondWith(
+                fetch(request)
+            );
+
+            return;
+
+        }
+
+
+        /*
+         * Normal app files:
+         * Network first,
+         * offline cache as fallback.
+         */
 
         event.respondWith(
 
@@ -93,7 +140,6 @@ self.addEventListener(
                         const copy =
                             response.clone();
 
-
                         caches
                             .open(CACHE_NAME)
                             .then(cache => {
@@ -107,10 +153,10 @@ self.addEventListener(
 
                     }
 
-
                     return response;
 
                 })
+
                 .catch(
                     () => {
 
