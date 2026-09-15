@@ -1220,7 +1220,7 @@ footer {
     min-height:0;
     overflow:auto;
 }
- 
+
 .viewer:fullscreen .viewer-body img {
     width:auto;
     height:auto;
