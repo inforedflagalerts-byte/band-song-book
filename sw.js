@@ -1,4 +1,4 @@
-const CACHE_NAME = "band-song-book-app-v8";
+const CACHE_NAME = "band-song-book-app-v9";
 const IMAGE_CACHE = "song-book-images-v5";
 
 const APP_FILES = [
@@ -9,7 +9,6 @@ const APP_FILES = [
     "./manifest.json"
 ];
 
-// Install
 self.addEventListener("install", event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
@@ -18,23 +17,21 @@ self.addEventListener("install", event => {
     );
 });
 
-// Activate
 self.addEventListener("activate", event => {
     event.waitUntil(
-        caches.keys().then(keys => {
-            return Promise.all(
+        caches.keys().then(keys =>
+            Promise.all(
                 keys
                     .filter(key =>
                         key !== CACHE_NAME &&
                         key !== IMAGE_CACHE
                     )
                     .map(key => caches.delete(key))
-            );
-        }).then(() => self.clients.claim())
+            )
+        ).then(() => self.clients.claim())
     );
 });
 
-// Fetch
 self.addEventListener("fetch", event => {
     const request = event.request;
 
@@ -42,20 +39,15 @@ self.addEventListener("fetch", event => {
 
     const url = new URL(request.url);
 
-    // NEVER cache GitHub API
-    if (url.hostname === "api.github.com") {
-        return;
-    }
+    // GitHub API must ALWAYS go directly to GitHub.
+    if (url.hostname === "api.github.com") return;
 
-    // NEVER cache GitHub raw images here
+    // Song images are handled by app.js and its image cache.
     if (
         url.hostname === "raw.githubusercontent.com" &&
         /\/chords\/|\/lyrics\//i.test(url.pathname)
-    ) {
-        return;
-    }
+    ) return;
 
-    // Always get latest app files when online
     const isAppFile =
         url.origin === self.location.origin &&
         (
@@ -69,40 +61,30 @@ self.addEventListener("fetch", event => {
 
     if (isAppFile) {
         event.respondWith(
-            fetch(request, {
-                cache: "no-store"
-            })
-            .then(response => {
-                if (response && response.ok) {
-                    const copy = response.clone();
-
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(request, copy);
-                    });
-                }
-
-                return response;
-            })
-            .catch(() => {
-                return caches.match(request);
-            })
+            fetch(request, { cache: "no-store" })
+                .then(response => {
+                    if (response.ok) {
+                        const copy = response.clone();
+                        caches.open(CACHE_NAME)
+                            .then(cache => cache.put(request, copy))
+                            .catch(() => {});
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(request))
         );
-
         return;
     }
 
-    // Other files: network first, cache fallback
     event.respondWith(
         fetch(request)
             .then(response => {
-                if (response && response.ok) {
+                if (response.ok) {
                     const copy = response.clone();
-
-                    caches.open(CACHE_NAME).then(cache => {
-                        cache.put(request, copy);
-                    });
+                    caches.open(CACHE_NAME)
+                        .then(cache => cache.put(request, copy))
+                        .catch(() => {});
                 }
-
                 return response;
             })
             .catch(() => caches.match(request))
