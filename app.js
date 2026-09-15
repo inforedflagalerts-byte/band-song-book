@@ -2,93 +2,181 @@ const USERNAME = "inforedflagalerts-byte";
 const REPO = "band-song-book";
 const BRANCH = "main";
 
-const API = `https://api.github.com/repos/${USERNAME}/${REPO}/contents`;
+const API =
+    `https://api.github.com/repos/${USERNAME}/${REPO}/contents`;
 
-const LIST_CACHE_KEY = "bandSongBookData_v5";
-const IMAGE_CACHE = "song-book-images-v5";
+const LIST_CACHE_KEY =
+    "bandSongBookData_v4";
+
+const IMAGE_CACHE =
+    "song-book-images-v4";
+
 
 let chords = [];
 let lyrics = [];
 
-/* =========================
-   DOM
-========================= */
 
-const $ = id => document.getElementById(id);
+/* =====================================================
+   ELEMENTS
+===================================================== */
 
-const chordsBtn = $("chordsBtn");
-const lyricsBtn = $("lyricsBtn");
+const chordsBtn =
+    document.getElementById("chordsBtn");
 
-const chordsSection = $("chordsSection");
-const lyricsSection = $("lyricsSection");
+const lyricsBtn =
+    document.getElementById("lyricsBtn");
 
-const chordList = $("chordList");
-const lyricList = $("lyricList");
+const chordsSection =
+    document.getElementById("chordsSection");
 
-const chordSearch = $("chordSearch");
-const lyricSearch = $("lyricSearch");
-
-const viewer = $("viewer");
-const viewerBody = $("viewerBody");
-const viewerImage = $("viewerImage");
-
-const viewerLoading = $("viewerLoading");
-const viewerError = $("viewerError");
-
-const status = $("status");
+const lyricsSection =
+    document.getElementById("lyricsSection");
 
 
-/* =========================
+const chordList =
+    document.getElementById("chordList");
+
+const lyricList =
+    document.getElementById("lyricList");
+
+
+const chordSearch =
+    document.getElementById("chordSearch");
+
+const lyricSearch =
+    document.getElementById("lyricSearch");
+
+
+const viewer =
+    document.getElementById("viewer");
+
+const viewerBody =
+    document.getElementById("viewerBody");
+
+const viewerImage =
+    document.getElementById("viewerImage");
+
+
+const viewerLoading =
+    document.getElementById("viewerLoading");
+
+const viewerError =
+    document.getElementById("viewerError");
+
+
+const status =
+    document.getElementById("status");
+
+
+/* =====================================================
+   ZOOM
+   1x -> 2x
+   Pinch on mobile
+   Wheel on PC
+   Drag when zoomed
+===================================================== */
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2;
+
+let zoomScale = 1;
+
+let zoomX = 0;
+let zoomY = 0;
+
+
+let isDragging = false;
+
+let dragStartX = 0;
+let dragStartY = 0;
+
+let dragOriginX = 0;
+let dragOriginY = 0;
+
+
+let pinchActive = false;
+
+let pinchStartDistance = 0;
+let pinchStartZoom = 1;
+
+
+/* =====================================================
    SERVICE WORKER
-========================= */
+===================================================== */
 
 if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
 
-        navigator.serviceWorker
-            .register("./sw.js")
-            .then(() => {
-                console.log("Service Worker registered");
-            })
-            .catch(error => {
-                console.log("Service Worker error:", error);
-            });
+    window.addEventListener(
+        "load",
+        () => {
 
-    });
+            navigator.serviceWorker
+                .register("./sw.js")
+                .then(() => {
+
+                    console.log(
+                        "Service Worker registered"
+                    );
+
+                })
+                .catch(error => {
+
+                    console.log(
+                        "Service Worker error:",
+                        error
+                    );
+
+                });
+
+        }
+    );
+
 }
 
 
-/* =========================
+/* =====================================================
    ONLINE STATUS
-========================= */
+===================================================== */
 
 function updateStatus() {
 
-    if (!status) return;
-
     if (navigator.onLine) {
 
-        status.textContent = "● Online";
-        status.style.color = "#8ed89b";
+        status.textContent =
+            "● Online";
+
+        status.style.color =
+            "#8ed89b";
 
     } else {
 
-        status.textContent = "● Offline Ready";
-        status.style.color = "#c59dd9";
+        status.textContent =
+            "● Offline Ready";
+
+        status.style.color =
+            "#c59dd9";
 
     }
 
 }
 
+
 updateStatus();
 
-window.addEventListener("online", updateStatus);
-window.addEventListener("offline", updateStatus);
+window.addEventListener(
+    "online",
+    updateStatus
+);
+
+window.addEventListener(
+    "offline",
+    updateStatus
+);
 
 
-/* =========================
+/* =====================================================
    HELPERS
-========================= */
+===================================================== */
 
 function cleanName(name) {
 
@@ -103,25 +191,31 @@ function cleanName(name) {
 
 function imageURL(file) {
 
-    return file.download_url || file.html_url || "";
+    return (
+        file.download_url ||
+        file.html_url ||
+        ""
+    );
 
 }
 
 
-/* =========================
-   LOAD FOLDER
-========================= */
+/* =====================================================
+   LOAD GITHUB FOLDER
+===================================================== */
 
 async function loadFolder(folder) {
 
     try {
 
-        const response = await fetch(
-            `${API}/${folder}?ref=${BRANCH}`,
-            {
-                cache: "no-store"
-            }
-        );
+        const response =
+            await fetch(
+                `${API}/${folder}?ref=${BRANCH}`,
+                {
+                    cache: "no-store"
+                }
+            );
+
 
         if (!response.ok) {
 
@@ -131,25 +225,37 @@ async function loadFolder(folder) {
 
         }
 
-        const files = await response.json();
+
+        const files =
+            await response.json();
+
 
         return files
 
-            .filter(file =>
-
-                file.type === "file" &&
-                /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name)
-
+            .filter(
+                file =>
+                    file.type === "file" &&
+                    /\.(jpg|jpeg|png|webp|gif)$/i
+                        .test(file.name)
             )
 
-            .map(file => ({
+            .map(
+                file => ({
 
-                name: file.name,
-                path: file.path,
-                download_url: file.download_url,
-                html_url: file.html_url
+                    name:
+                        file.name,
 
-            }));
+                    path:
+                        file.path,
+
+                    download_url:
+                        file.download_url,
+
+                    html_url:
+                        file.html_url
+
+                })
+            );
 
     } catch (error) {
 
@@ -165,23 +271,20 @@ async function loadFolder(folder) {
 }
 
 
-/* =========================
+/* =====================================================
    LIST CACHE
-========================= */
+===================================================== */
 
 function saveListData() {
 
     try {
 
         localStorage.setItem(
-
             LIST_CACHE_KEY,
-
             JSON.stringify({
                 chords,
                 lyrics
             })
-
         );
 
     } catch (error) {
@@ -201,24 +304,45 @@ function loadListData() {
     try {
 
         const saved =
-            localStorage.getItem(LIST_CACHE_KEY);
+            localStorage.getItem(
+                LIST_CACHE_KEY
+            );
 
-        if (!saved) return false;
+
+        if (!saved) {
+
+            return false;
+
+        }
+
 
         const data =
             JSON.parse(saved);
 
-        if (Array.isArray(data.chords)) {
 
-            chords = data.chords;
+        if (
+            Array.isArray(
+                data.chords
+            )
+        ) {
+
+            chords =
+                data.chords;
 
         }
 
-        if (Array.isArray(data.lyrics)) {
 
-            lyrics = data.lyrics;
+        if (
+            Array.isArray(
+                data.lyrics
+            )
+        ) {
+
+            lyrics =
+                data.lyrics;
 
         }
+
 
         return true;
 
@@ -239,19 +363,24 @@ function loadListData() {
 }
 
 
-/* =========================
+/* =====================================================
    IMAGE CACHE
-========================= */
+===================================================== */
 
 async function getImageCache() {
 
-    if (!("caches" in window)) {
+    if (
+        !("caches" in window)
+    ) {
 
         return null;
 
     }
 
-    return await caches.open(IMAGE_CACHE);
+
+    return await caches.open(
+        IMAGE_CACHE
+    );
 
 }
 
@@ -261,20 +390,39 @@ async function getCachedImageURL(url) {
     const cache =
         await getImageCache();
 
-    if (!cache) return null;
+
+    if (!cache) {
+
+        return null;
+
+    }
+
 
     const response =
         await cache.match(url);
 
-    if (!response) return null;
+
+    if (!response) {
+
+        return null;
+
+    }
+
 
     const blob =
         await response.blob();
 
-    return URL.createObjectURL(blob);
+
+    return URL.createObjectURL(
+        blob
+    );
 
 }
 
+
+/* =====================================================
+   DOWNLOAD ONLY CLICKED IMAGE
+===================================================== */
 
 async function downloadAndCacheImage(url) {
 
@@ -282,26 +430,45 @@ async function downloadAndCacheImage(url) {
         await getImageCache();
 
 
-    /* Check cache first */
+    if (!cache) {
 
-    if (cache) {
+        const response =
+            await fetch(
+                url,
+                {
+                    cache: "no-store"
+                }
+            );
 
-        const existing =
-            await cache.match(url);
 
-        if (existing) {
+        if (!response.ok) {
 
-            const blob =
-                await existing.blob();
-
-            return URL.createObjectURL(blob);
+            throw new Error(
+                "Image download failed"
+            );
 
         }
+
+
+        return URL.createObjectURL(
+            await response.blob()
+        );
 
     }
 
 
-    /* Offline */
+    const existing =
+        await cache.match(url);
+
+
+    if (existing) {
+
+        return URL.createObjectURL(
+            await existing.blob()
+        );
+
+    }
+
 
     if (!navigator.onLine) {
 
@@ -312,57 +479,41 @@ async function downloadAndCacheImage(url) {
     }
 
 
-    /* Download ORIGINAL image */
-
     const response =
-        await fetch(url, {
-
-            cache: "no-store",
-            mode: "cors"
-
-        });
+        await fetch(
+            url,
+            {
+                cache: "no-store",
+                mode: "cors"
+            }
+        );
 
 
     if (!response.ok) {
 
         throw new Error(
-            `Image download failed: ${response.status}`
+            "Image download failed"
         );
 
     }
 
 
-    /*
-       IMPORTANT
-
-       We save the ORIGINAL response.
-
-       No canvas.
-       No resizing.
-       No compression.
-    */
-
-    if (cache) {
-
-        await cache.put(
-            url,
-            response.clone()
-        );
-
-    }
+    await cache.put(
+        url,
+        response.clone()
+    );
 
 
-    const blob =
-        await response.blob();
-
-    return URL.createObjectURL(blob);
+    return URL.createObjectURL(
+        await response.blob()
+    );
 
 }
 
 
-/* =========================
+/* =====================================================
    LOAD DATA
-========================= */
+===================================================== */
 
 async function loadData() {
 
@@ -371,21 +522,19 @@ async function loadData() {
             🎸 Loading library...
         </div>`;
 
+
     lyricList.innerHTML =
         `<div class="empty">
             🎤 Loading library...
         </div>`;
 
 
-    /* Load saved list */
-
     loadListData();
+
 
     renderChords(chords);
     renderLyrics(lyrics);
 
-
-    /* Offline */
 
     if (!navigator.onLine) {
 
@@ -394,34 +543,41 @@ async function loadData() {
     }
 
 
-    /* Get latest GitHub list */
-
     const [
         newChords,
         newLyrics
-    ] = await Promise.all([
+    ] =
+        await Promise.all([
 
-        loadFolder("chords"),
-        loadFolder("lyrics")
+            loadFolder("chords"),
 
-    ]);
+            loadFolder("lyrics")
+
+        ]);
 
 
-    if (newChords !== null) {
+    if (
+        newChords !== null
+    ) {
 
-        chords = newChords;
+        chords =
+            newChords;
 
     }
 
 
-    if (newLyrics !== null) {
+    if (
+        newLyrics !== null
+    ) {
 
-        lyrics = newLyrics;
+        lyrics =
+            newLyrics;
 
     }
 
 
     saveListData();
+
 
     renderChords(chords);
     renderLyrics(lyrics);
@@ -429,22 +585,34 @@ async function loadData() {
 }
 
 
-/* =========================
+/* =====================================================
    SONG ITEM
-========================= */
+===================================================== */
 
-function createSongItem(file, type) {
+function createSongItem(
+    file,
+    type
+) {
 
     const item =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
-    item.className = "song-item";
+
+    item.className =
+        "song-item";
 
 
     const icon =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
 
-    icon.className = "song-icon";
+
+    icon.className =
+        "song-icon";
+
 
     icon.textContent =
         type === "chord"
@@ -453,33 +621,44 @@ function createSongItem(file, type) {
 
 
     const details =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     details.className =
         "song-details";
 
 
     const name =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     name.className =
         "song-name";
 
+
     name.textContent =
-        cleanName(file.name);
+        cleanName(
+            file.name
+        );
 
 
     const sub =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     sub.className =
         "song-type";
 
+
     sub.textContent =
         type === "chord"
-
             ? "Chord Sheet • Tap to open"
-
             : "Lyrics • Tap to open";
 
 
@@ -488,12 +667,17 @@ function createSongItem(file, type) {
 
 
     const arrow =
-        document.createElement("div");
+        document.createElement(
+            "div"
+        );
+
 
     arrow.className =
         "song-arrow";
 
-    arrow.textContent = "›";
+
+    arrow.textContent =
+        "›";
 
 
     item.appendChild(icon);
@@ -506,7 +690,8 @@ function createSongItem(file, type) {
         () => {
 
             openViewer(
-                imageURL(file)
+                imageURL(file),
+                cleanName(file.name)
             );
 
         }
@@ -518,40 +703,31 @@ function createSongItem(file, type) {
 }
 
 
-/* =========================
+/* =====================================================
    RENDER CHORDS
-========================= */
+===================================================== */
 
 function renderChords(list) {
 
-    const count =
-        $("chordCount");
-
-    if (count) {
-
-        count.textContent =
-            list.length;
-
-    }
+    document.getElementById(
+        "chordCount"
+    ).textContent =
+        list.length;
 
 
-    chordList.innerHTML = "";
+    chordList.innerHTML =
+        "";
 
 
     if (!list.length) {
 
         chordList.innerHTML = `
-
             <div class="empty">
-
                 <div class="empty-icon">
                     🎸
                 </div>
-
                 No chord sheets available.
-
             </div>
-
         `;
 
         return;
@@ -559,130 +735,93 @@ function renderChords(list) {
     }
 
 
-    list.forEach(file => {
+    list.forEach(
+        file => {
 
-        chordList.appendChild(
+            chordList.appendChild(
+                createSongItem(
+                    file,
+                    "chord"
+                )
+            );
 
-            createSongItem(
-                file,
-                "chord"
-            )
-
-        );
-
-    });
-
-}
-
-
-/* =========================
-   RENDER LYRICS
-========================= */
-
-function renderLyrics(list) {
-
-    const count =
-        $("lyricCount");
-
-    if (count) {
-
-        count.textContent =
-            list.length;
-
-    }
-
-
-    lyricList.innerHTML = "";
-
-
-    if (!list.length) {
-
-        lyricList.innerHTML = `
-
-            <div class="empty">
-
-                <div class="empty-icon">
-                    🎤
-                </div>
-
-                No lyrics available.
-
-            </div>
-
-        `;
-
-        return;
-
-    }
-
-
-    list.forEach(file => {
-
-        lyricList.appendChild(
-
-            createSongItem(
-                file,
-                "lyric"
-            )
-
-        );
-
-    });
+        }
+    );
 
 }
 
 
 /* =====================================================
-   HIGH QUALITY IMAGE VIEWER
+   RENDER LYRICS
 ===================================================== */
 
-let currentObjectURL = null;
+function renderLyrics(list) {
+
+    document.getElementById(
+        "lyricCount"
+    ).textContent =
+        list.length;
 
 
-/* Zoom values */
-
-let zoomScale = 1;
-
-let zoomX = 0;
-let zoomY = 0;
-
-let minZoom = 1;
-let maxZoom = 1;
+    lyricList.innerHTML =
+        "";
 
 
-/* Mouse drag */
+    if (!list.length) {
 
-let isDragging = false;
+        lyricList.innerHTML = `
+            <div class="empty">
+                <div class="empty-icon">
+                    🎤
+                </div>
+                No lyrics available.
+            </div>
+        `;
 
-let dragStartX = 0;
-let dragStartY = 0;
+        return;
 
-let dragOriginX = 0;
-let dragOriginY = 0;
-
-
-/* Pinch */
-
-let pinchActive = false;
-
-let pinchStartDistance = 0;
-let pinchStartScale = 1;
-
-let pinchStartMidX = 0;
-let pinchStartMidY = 0;
-
-let pinchStartX = 0;
-let pinchStartY = 0;
+    }
 
 
-/* Double tap */
+    list.forEach(
+        file => {
 
-let lastTapTime = 0;
+            lyricList.appendChild(
+                createSongItem(
+                    file,
+                    "lyric"
+                )
+            );
+
+        }
+    );
+
+}
 
 
-/* =========================
-   CLAMP
-========================= */
+/* =====================================================
+   VIEWER STATE
+===================================================== */
+
+function setViewerState(state) {
+
+    viewerLoading.classList.toggle(
+        "hidden",
+        state !== "loading"
+    );
+
+
+    viewerError.classList.toggle(
+        "hidden",
+        state !== "error"
+    );
+
+}
+
+
+/* =====================================================
+   ZOOM HELPERS
+===================================================== */
 
 function clamp(
     value,
@@ -698,128 +837,99 @@ function clamp(
 }
 
 
-/* =========================
-   SMART MAX ZOOM
-========================= */
-
-function calculateSmartZoomLimit() {
-
-    if (
-        !viewerImage.naturalWidth ||
-        !viewerImage.naturalHeight
-    ) {
-
-        maxZoom = 1;
-
-        return;
-
-    }
-
-
-    const rect =
-        viewerImage.getBoundingClientRect();
-
-
-    if (
-        !rect.width ||
-        !rect.height
-    ) {
-
-        maxZoom = 1;
-
-        return;
-
-    }
-
-
-    /*
-       Natural image pixels / screen pixels
-    */
-
-    const nativeScaleX =
-        viewerImage.naturalWidth /
-        rect.width;
-
-
-    const nativeScaleY =
-        viewerImage.naturalHeight /
-        rect.height;
-
-
-    /*
-       Use the smaller ratio.
-
-       This means we don't unnecessarily
-       upscale beyond the real source
-       resolution in both directions.
-    */
-
-    const nativeZoom =
-        Math.min(
-            nativeScaleX,
-            nativeScaleY
-        );
-
-
-    /*
-       Maximum 4x browser zoom.
-
-       High resolution images can use
-       the full 4x.
-    */
-
-    maxZoom =
-        Math.max(
-            1,
-            Math.min(
-                4,
-                nativeZoom
-            )
-        );
-
-}
-
-
-/* =========================
-   APPLY ZOOM
-========================= */
-
 function applyZoom() {
 
-    if (!viewerImage) return;
-
-
-    zoomScale =
-        clamp(
-            zoomScale,
-            minZoom,
-            maxZoom
-        );
-
-
-    if (zoomScale === 1) {
-
-        zoomX = 0;
-        zoomY = 0;
-
-    }
-
-
     viewerImage.style.transform =
-
         `translate3d(
             ${zoomX}px,
             ${zoomY}px,
             0
-        )
-        scale(${zoomScale})`;
+        ) scale(${zoomScale})`;
+
+
+    viewerImage.classList.toggle(
+        "zoomed",
+        zoomScale > 1
+    );
 
 }
 
 
-/* =========================
-   RESET ZOOM
-========================= */
+function setZoom(
+    newScale
+) {
+
+    const oldScale =
+        zoomScale;
+
+
+    zoomScale =
+        clamp(
+            newScale,
+            MIN_ZOOM,
+            MAX_ZOOM
+        );
+
+
+    if (
+        zoomScale === 1
+    ) {
+
+        zoomX = 0;
+        zoomY = 0;
+
+    } else {
+
+        const ratio =
+            zoomScale / oldScale;
+
+
+        zoomX *= ratio;
+        zoomY *= ratio;
+
+
+        const maxMoveX =
+            Math.max(
+                0,
+                (
+                    viewerBody.clientWidth *
+                    (zoomScale - 1)
+                ) / 2
+            );
+
+
+        const maxMoveY =
+            Math.max(
+                0,
+                (
+                    viewerBody.clientHeight *
+                    (zoomScale - 1)
+                ) / 2
+            );
+
+
+        zoomX =
+            clamp(
+                zoomX,
+                -maxMoveX,
+                maxMoveX
+            );
+
+
+        zoomY =
+            clamp(
+                zoomY,
+                -maxMoveY,
+                maxMoveY
+            );
+
+    }
+
+
+    applyZoom();
+
+}
+
 
 function resetZoom() {
 
@@ -828,108 +938,36 @@ function resetZoom() {
     zoomX = 0;
     zoomY = 0;
 
-    minZoom = 1;
+    isDragging = false;
+    pinchActive = false;
 
-    calculateSmartZoomLimit();
+    viewerImage.style.transform =
+        "translate3d(0, 0, 0) scale(1)";
 
-    applyZoom();
-
-}
-
-
-/* =========================
-   SET ZOOM
-========================= */
-
-function setZoom(
-    newScale,
-    centerX = window.innerWidth / 2,
-    centerY = window.innerHeight / 2
-) {
-
-    if (
-        !viewerImage ||
-        viewerImage.classList.contains("hidden")
-    ) {
-
-        return;
-
-    }
-
-
-    const oldScale =
-        zoomScale;
-
-
-    const nextScale =
-        clamp(
-            newScale,
-            minZoom,
-            maxZoom
-        );
-
-
-    if (nextScale === oldScale) {
-
-        return;
-
-    }
-
-
-    /*
-       Zoom toward pointer/finger.
-    */
-
-    const ratio =
-        nextScale /
-        oldScale;
-
-
-    zoomX =
-        centerX -
-        (centerX - zoomX) *
-        ratio;
-
-
-    zoomY =
-        centerY -
-        (centerY - zoomY) *
-        ratio;
-
-
-    zoomScale =
-        nextScale;
-
-
-    if (zoomScale === 1) {
-
-        zoomX = 0;
-        zoomY = 0;
-
-    }
-
-
-    applyZoom();
+    viewerImage.classList.remove(
+        "zoomed"
+    );
 
 }
 
 
-/* =========================
-   TOUCH HELPERS
-========================= */
+/* =====================================================
+   TOUCH DISTANCE
+===================================================== */
 
-function touchDistance(
-    t1,
-    t2
+function getTouchDistance(
+    touch1,
+    touch2
 ) {
 
     const dx =
-        t2.clientX -
-        t1.clientX;
+        touch1.clientX -
+        touch2.clientX;
+
 
     const dy =
-        t2.clientY -
-        t1.clientY;
+        touch1.clientY -
+        touch2.clientY;
 
 
     return Math.sqrt(
@@ -940,362 +978,239 @@ function touchDistance(
 }
 
 
-function touchMidpoint(
-    t1,
-    t2
-) {
+/* =====================================================
+   PINCH ZOOM
+===================================================== */
 
-    return {
-
-        x:
-            (t1.clientX +
-             t2.clientX) / 2,
-
-        y:
-            (t1.clientY +
-             t2.clientY) / 2
-
-    };
-
-}
-
-
-/* =========================
-   VIEWER STATE
-========================= */
-
-function setViewerState(state) {
-
-    if (viewerLoading) {
-
-        viewerLoading.classList.toggle(
-            "hidden",
-            state !== "loading"
-        );
-
-    }
-
-
-    if (viewerError) {
-
-        viewerError.classList.toggle(
-            "hidden",
-            state !== "error"
-        );
-
-    }
-
-}
-
-
-/* =========================
-   SHOW VIEWER
-========================= */
-
-function showViewerShell() {
-
-    viewer.classList.remove(
-        "hidden"
-    );
-
-    viewer.setAttribute(
-        "aria-hidden",
-        "false"
-    );
-
-
-    document.body.style.overflow =
-        "hidden";
-
-
-    resetZoom();
-
-}
-
-
-/* =========================
-   FULLSCREEN
-========================= */
-
-async function enterFullscreen() {
-
-    try {
+viewerImage.addEventListener(
+    "touchstart",
+    event => {
 
         if (
-            viewer &&
-            document.fullscreenEnabled &&
-            !document.fullscreenElement
+            event.touches.length === 2
         ) {
 
-            await viewer.requestFullscreen();
+            event.preventDefault();
 
-        }
+            pinchActive =
+                true;
 
-    } catch (error) {
-
-        console.log(
-            "Fullscreen unavailable:",
-            error
-        );
-
-    }
-
-}
+            isDragging =
+                false;
 
 
-async function exitFullscreen() {
-
-    try {
-
-        if (document.fullscreenElement) {
-
-            await document.exitFullscreen();
-
-        }
-
-    } catch (error) {
-
-        console.log(
-            "Fullscreen exit error:",
-            error
-        );
-
-    }
-
-}
-
-
-/* =========================
-   OPEN VIEWER
-========================= */
-
-async function openViewer(image) {
-
-    if (!image) return;
-
-
-    /*
-       Show viewer immediately.
-    */
-
-    showViewerShell();
-
-
-    /*
-       IMPORTANT:
-
-       Fullscreen request happens BEFORE
-       async downloading.
-    */
-
-    enterFullscreen();
-
-
-    viewerImage.removeAttribute(
-        "src"
-    );
-
-    viewerImage.classList.add(
-        "hidden"
-    );
-
-
-    setViewerState(
-        "loading"
-    );
-
-
-    try {
-
-        /*
-           First check local cache.
-        */
-
-        let localURL =
-            await getCachedImageURL(
-                image
-            );
-
-
-        /*
-           Not cached:
-           download ONLY this image.
-        */
-
-        if (!localURL) {
-
-            if (!navigator.onLine) {
-
-                throw new Error(
-                    "OFFLINE_IMAGE_NOT_SAVED"
+            pinchStartDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
                 );
+
+
+            pinchStartZoom =
+                zoomScale;
+
+
+            return;
+
+        }
+
+
+        if (
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            event.preventDefault();
+
+            isDragging =
+                true;
+
+
+            dragStartX =
+                event.touches[0].clientX;
+
+            dragStartY =
+                event.touches[0].clientY;
+
+
+            dragOriginX =
+                zoomX;
+
+            dragOriginY =
+                zoomY;
+
+        }
+
+    },
+    {
+        passive: false
+    }
+);
+
+
+/* =====================================================
+   TOUCH MOVE
+===================================================== */
+
+viewerImage.addEventListener(
+    "touchmove",
+    event => {
+
+        if (
+            pinchActive &&
+            event.touches.length === 2
+        ) {
+
+            event.preventDefault();
+
+
+            const currentDistance =
+                getTouchDistance(
+                    event.touches[0],
+                    event.touches[1]
+                );
+
+
+            if (
+                pinchStartDistance <= 0
+            ) {
+
+                return;
 
             }
 
 
-            localURL =
-                await downloadAndCacheImage(
-                    image
-                );
+            const ratio =
+                currentDistance /
+                pinchStartDistance;
+
+
+            setZoom(
+                pinchStartZoom *
+                ratio
+            );
+
+
+            return;
 
         }
 
 
-        currentObjectURL =
-            localURL;
+        if (
+            isDragging &&
+            event.touches.length === 1 &&
+            zoomScale > 1
+        ) {
+
+            event.preventDefault();
 
 
-        /*
-           Wait for browser to fully
-           decode the original image.
-        */
-
-        viewerImage.onload =
-            () => {
-
-                requestAnimationFrame(
-                    () => {
-
-                        /*
-                           Read REAL natural
-                           image dimensions.
-                        */
-
-                        calculateSmartZoomLimit();
-
-                        resetZoom();
+            const dx =
+                event.touches[0].clientX -
+                dragStartX;
 
 
-                        viewerImage.classList.remove(
-                            "hidden"
-                        );
+            const dy =
+                event.touches[0].clientY -
+                dragStartY;
 
 
-                        setViewerState(
-                            "ready"
-                        );
-
-                    }
+            const maxMoveX =
+                Math.max(
+                    0,
+                    (
+                        viewerBody.clientWidth *
+                        (zoomScale - 1)
+                    ) / 2
                 );
 
-            };
 
-
-        viewerImage.onerror =
-            () => {
-
-                viewerImage.classList.add(
-                    "hidden"
+            const maxMoveY =
+                Math.max(
+                    0,
+                    (
+                        viewerBody.clientHeight *
+                        (zoomScale - 1)
+                    ) / 2
                 );
 
-                setViewerState(
-                    "error"
+
+            zoomX =
+                clamp(
+                    dragOriginX + dx,
+                    -maxMoveX,
+                    maxMoveX
                 );
 
-            };
+
+            zoomY =
+                clamp(
+                    dragOriginY + dy,
+                    -maxMoveY,
+                    maxMoveY
+                );
 
 
-        /*
-           Give browser the original
-           blob URL.
-        */
+            applyZoom();
 
-        viewerImage.src =
-            localURL;
+        }
 
-
-    } catch (error) {
-
-        console.log(
-            "Viewer error:",
-            error
-        );
-
-
-        viewerImage.removeAttribute(
-            "src"
-        );
-
-        viewerImage.classList.add(
-            "hidden"
-        );
-
-
-        setViewerState(
-            "error"
-        );
-
+    },
+    {
+        passive: false
     }
-
-}
-
-
-/* =========================
-   CLOSE VIEWER
-========================= */
-
-async function closeImageViewer() {
-
-    const oldURL =
-        currentObjectURL;
+);
 
 
-    currentObjectURL =
-        null;
+/* =====================================================
+   TOUCH END
+===================================================== */
+
+viewerImage.addEventListener(
+    "touchend",
+    event => {
+
+        if (
+            event.touches.length < 2
+        ) {
+
+            pinchActive =
+                false;
+
+        }
 
 
-    viewerImage.removeAttribute(
-        "src"
-    );
+        if (
+            event.touches.length === 0
+        ) {
 
-    viewerImage.classList.add(
-        "hidden"
-    );
+            isDragging =
+                false;
 
+        }
 
-    viewer.classList.add(
-        "hidden"
-    );
-
-    viewer.setAttribute(
-        "aria-hidden",
-        "true"
-    );
-
-
-    document.body.style.overflow =
-        "";
-
-
-    resetZoom();
-
-
-    if (
-        oldURL &&
-        oldURL.startsWith("blob:")
-    ) {
-
-        setTimeout(
-            () => {
-
-                try {
-
-                    URL.revokeObjectURL(
-                        oldURL
-                    );
-
-                } catch (error) {}
-
-            },
-            0
-        );
-
+    },
+    {
+        passive: false
     }
+);
 
 
-    await exitFullscreen();
+/* =====================================================
+   DOUBLE TAP OFF
+===================================================== */
 
-}
+viewerImage.addEventListener(
+    "dblclick",
+    event => {
+
+        event.preventDefault();
+
+    },
+    {
+        passive: false
+    }
+);
 
 
 /* =====================================================
@@ -1309,6 +1224,9 @@ viewerBody.addEventListener(
         if (
             viewer.classList.contains(
                 "hidden"
+            ) ||
+            viewerImage.classList.contains(
+                "hidden"
             )
         ) {
 
@@ -1320,34 +1238,14 @@ viewerBody.addEventListener(
         event.preventDefault();
 
 
-        const rect =
-            viewerBody.getBoundingClientRect();
-
-
-        const pointerX =
-            event.clientX -
-            rect.left;
-
-
-        const pointerY =
-            event.clientY -
-            rect.top;
-
-
-        const zoomFactor =
+        const step =
             event.deltaY < 0
-                ? 1.15
-                : 1 / 1.15;
+                ? 0.125
+                : -0.125;
 
 
         setZoom(
-
-            zoomScale *
-            zoomFactor,
-
-            pointerX,
-            pointerY
-
+            zoomScale + step
         );
 
     },
@@ -1358,10 +1256,10 @@ viewerBody.addEventListener(
 
 
 /* =====================================================
-   PC MOUSE DRAG
+   PC DRAG
 ===================================================== */
 
-viewerBody.addEventListener(
+viewerImage.addEventListener(
     "mousedown",
     event => {
 
@@ -1374,16 +1272,11 @@ viewerBody.addEventListener(
         }
 
 
-        if (
-            event.button !== 0
-        ) {
-
-            return;
-
-        }
+        event.preventDefault();
 
 
-        isDragging = true;
+        isDragging =
+            true;
 
 
         dragStartX =
@@ -1399,14 +1292,6 @@ viewerBody.addEventListener(
         dragOriginY =
             zoomY;
 
-
-        viewerBody.classList.add(
-            "dragging"
-        );
-
-
-        event.preventDefault();
-
     }
 );
 
@@ -1415,29 +1300,63 @@ window.addEventListener(
     "mousemove",
     event => {
 
-        if (!isDragging) return;
+        if (
+            !isDragging ||
+            zoomScale <= 1
+        ) {
+
+            return;
+
+        }
+
+
+        const dx =
+            event.clientX -
+            dragStartX;
+
+
+        const dy =
+            event.clientY -
+            dragStartY;
+
+
+        const maxMoveX =
+            Math.max(
+                0,
+                (
+                    viewerBody.clientWidth *
+                    (zoomScale - 1)
+                ) / 2
+            );
+
+
+        const maxMoveY =
+            Math.max(
+                0,
+                (
+                    viewerBody.clientHeight *
+                    (zoomScale - 1)
+                ) / 2
+            );
 
 
         zoomX =
-            dragOriginX +
-            (
-                event.clientX -
-                dragStartX
+            clamp(
+                dragOriginX + dx,
+                -maxMoveX,
+                maxMoveX
             );
 
 
         zoomY =
-            dragOriginY +
-            (
-                event.clientY -
-                dragStartY
+            clamp(
+                dragOriginY + dy,
+                -maxMoveY,
+                maxMoveY
             );
 
 
         applyZoom();
-
-
-        event.preventDefault();
 
     }
 );
@@ -1447,461 +1366,309 @@ window.addEventListener(
     "mouseup",
     () => {
 
-        isDragging = false;
+        isDragging =
+            false;
 
-        viewerBody.classList.remove(
-            "dragging"
+    }
+);
+
+
+/* =====================================================
+   ENTER REAL BROWSER FULLSCREEN
+===================================================== */
+
+async function enterFullscreen() {
+
+    try {
+
+        if (
+            document.fullscreenElement
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            viewer.requestFullscreen
+        ) {
+
+            await viewer.requestFullscreen();
+
+        } else if (
+            viewer.webkitRequestFullscreen
+        ) {
+
+            viewer.webkitRequestFullscreen();
+
+        }
+
+    } catch (error) {
+
+        console.log(
+            "Fullscreen not available:",
+            error
         );
 
     }
-);
+
+}
 
 
 /* =====================================================
-   MOBILE PINCH ZOOM + DRAG
+   EXIT REAL BROWSER FULLSCREEN
 ===================================================== */
 
-viewerBody.addEventListener(
-    "touchstart",
-    event => {
+async function exitFullscreen() {
 
-        /*
-           Two fingers = pinch
-        */
+    try {
 
         if (
-            event.touches.length === 2
+            document.fullscreenElement
         ) {
 
-            pinchActive = true;
-
-            isDragging = false;
-
-
-            const t1 =
-                event.touches[0];
-
-            const t2 =
-                event.touches[1];
-
-
-            pinchStartDistance =
-                touchDistance(
-                    t1,
-                    t2
-                );
-
-
-            pinchStartScale =
-                zoomScale;
-
-
-            const mid =
-                touchMidpoint(
-                    t1,
-                    t2
-                );
-
-
-            pinchStartMidX =
-                mid.x;
-
-            pinchStartMidY =
-                mid.y;
-
-
-            pinchStartX =
-                zoomX;
-
-            pinchStartY =
-                zoomY;
-
-
-            event.preventDefault();
-
-            return;
+            await document.exitFullscreen();
 
         }
 
-
-        /*
-           One finger while zoomed =
-           drag image
-        */
-
-        if (
-            event.touches.length === 1 &&
-            zoomScale > 1
-        ) {
-
-            const touch =
-                event.touches[0];
-
-
-            isDragging = true;
-
-
-            dragStartX =
-                touch.clientX;
-
-            dragStartY =
-                touch.clientY;
-
-
-            dragOriginX =
-                zoomX;
-
-            dragOriginY =
-                zoomY;
-
-
-            event.preventDefault();
-
-        }
-
-    },
-    {
-        passive: false
-    }
-);
-
-
-viewerBody.addEventListener(
-    "touchmove",
-    event => {
-
-        /*
-           PINCH
-        */
-
-        if (
-            event.touches.length === 2 &&
-            pinchActive
-        ) {
-
-            const t1 =
-                event.touches[0];
-
-            const t2 =
-                event.touches[1];
-
-
-            const distance =
-                touchDistance(
-                    t1,
-                    t2
-                );
-
-
-            if (
-                pinchStartDistance <= 0
-            ) {
-
-                return;
-
-            }
-
-
-            const ratio =
-                distance /
-                pinchStartDistance;
-
-
-            const nextScale =
-                clamp(
-
-                    pinchStartScale *
-                    ratio,
-
-                    minZoom,
-                    maxZoom
-
-                );
-
-
-            const mid =
-                touchMidpoint(
-                    t1,
-                    t2
-                );
-
-
-            const scaleRatio =
-                nextScale /
-                pinchStartScale;
-
-
-            /*
-               Keep pinch point
-               under the fingers.
-            */
-
-            zoomX =
-                mid.x -
-                (
-                    pinchStartMidX -
-                    pinchStartX
-                ) *
-                scaleRatio;
-
-
-            zoomY =
-                mid.y -
-                (
-                    pinchStartMidY -
-                    pinchStartY
-                ) *
-                scaleRatio;
-
-
-            zoomScale =
-                nextScale;
-
-
-            applyZoom();
-
-
-            event.preventDefault();
-
-            return;
-
-        }
-
-
-        /*
-           DRAG
-        */
-
-        if (
-            event.touches.length === 1 &&
-            isDragging &&
-            zoomScale > 1
-        ) {
-
-            const touch =
-                event.touches[0];
-
-
-            zoomX =
-                dragOriginX +
-                (
-                    touch.clientX -
-                    dragStartX
-                );
-
-
-            zoomY =
-                dragOriginY +
-                (
-                    touch.clientY -
-                    dragStartY
-                );
-
-
-            applyZoom();
-
-
-            event.preventDefault();
-
-        }
-
-    },
-    {
-        passive: false
-    }
-);
-
-
-viewerBody.addEventListener(
-    "touchend",
-    event => {
-
-        if (
-            event.touches.length < 2
-        ) {
-
-            pinchActive = false;
-
-        }
-
-
-        if (
-            event.touches.length === 0
-        ) {
-
-            isDragging = false;
-
-        }
-
-    },
-    {
-        passive: false
-    }
-);
-
-
-viewerBody.addEventListener(
-    "touchcancel",
-    () => {
-
-        pinchActive = false;
-        isDragging = false;
+    } catch (error) {
+
+        console.log(
+            "Fullscreen exit:",
+            error
+        );
 
     }
-);
+
+}
 
 
 /* =====================================================
-   DOUBLE TAP
+   OPEN VIEWER
 ===================================================== */
 
-viewerBody.addEventListener(
-    "touchend",
-    event => {
+async function openViewer(
+    image,
+    title
+) {
 
-        if (
-            event.changedTouches.length !== 1
-        ) {
+    if (!image) {
 
-            return;
+        return;
 
-        }
-
-
-        const now =
-            Date.now();
-
-
-        if (
-            now - lastTapTime < 280
-        ) {
-
-            /*
-               Already zoomed = reset
-            */
-
-            if (zoomScale > 1) {
-
-                resetZoom();
-
-            } else {
-
-                /*
-                   Normal = 2x
-                */
-
-                const touch =
-                    event.changedTouches[0];
-
-
-                setZoom(
-
-                    Math.min(
-                        2,
-                        maxZoom
-                    ),
-
-                    touch.clientX,
-                    touch.clientY
-
-                );
-
-            }
-
-        }
-
-
-        lastTapTime =
-            now;
-
-    },
-    {
-        passive: true
     }
-);
 
 
-/* =====================================================
-   WINDOW RESIZE
-===================================================== */
+    viewer.classList.remove(
+        "hidden"
+    );
 
-window.addEventListener(
-    "resize",
-    () => {
 
-        if (
-            viewer.classList.contains(
+    viewer.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+
+    document.body.style.overflow =
+        "hidden";
+
+
+    resetZoom();
+
+
+    viewerBody.scrollTop =
+        0;
+
+    viewerBody.scrollLeft =
+        0;
+
+
+    viewerImage.removeAttribute(
+        "src"
+    );
+
+
+    viewerImage.classList.add(
+        "hidden"
+    );
+
+
+    setViewerState(
+        "loading"
+    );
+
+
+    /* Enter fullscreen immediately */
+    await enterFullscreen();
+
+
+    try {
+
+        /* Check saved image first */
+
+        const cachedURL =
+            await getCachedImageURL(
+                image
+            );
+
+
+        if (cachedURL) {
+
+            viewerImage.src =
+                cachedURL;
+
+            viewerImage.classList.remove(
                 "hidden"
-            )
-        ) {
+            );
+
+            setViewerState(
+                "ready"
+            );
 
             return;
 
         }
 
 
-        requestAnimationFrame(
+        /* Offline + not saved */
+
+        if (
+            !navigator.onLine
+        ) {
+
+            throw new Error(
+                "OFFLINE_IMAGE_NOT_SAVED"
+            );
+
+        }
+
+
+        /* Download only this image */
+
+        const localURL =
+            await downloadAndCacheImage(
+                image
+            );
+
+
+        viewerImage.src =
+            localURL;
+
+
+        viewerImage.classList.remove(
+            "hidden"
+        );
+
+
+        setViewerState(
+            "ready"
+        );
+
+
+    } catch (error) {
+
+        console.log(
+            "Viewer error:",
+            error
+        );
+
+
+        viewerImage.removeAttribute(
+            "src"
+        );
+
+
+        viewerImage.classList.add(
+            "hidden"
+        );
+
+
+        setViewerState(
+            "error"
+        );
+
+    }
+
+}
+
+
+/* =====================================================
+   CLOSE VIEWER
+===================================================== */
+
+async function closeImageViewer() {
+
+    const oldURL =
+        viewerImage.src;
+
+
+    viewer.classList.add(
+        "hidden"
+    );
+
+
+    viewer.setAttribute(
+        "aria-hidden",
+        "true"
+    );
+
+
+    viewerImage.removeAttribute(
+        "src"
+    );
+
+
+    viewerImage.classList.add(
+        "hidden"
+    );
+
+
+    resetZoom();
+
+
+    document.body.style.overflow =
+        "";
+
+
+    if (
+        oldURL &&
+        oldURL.startsWith("blob:")
+    ) {
+
+        setTimeout(
             () => {
 
-                calculateSmartZoomLimit();
+                URL.revokeObjectURL(
+                    oldURL
+                );
 
-
-                if (
-                    zoomScale >
-                    maxZoom
-                ) {
-
-                    zoomScale =
-                        maxZoom;
-
-                }
-
-
-                applyZoom();
-
-            }
+            },
+            0
         );
 
     }
-);
+
+
+    await exitFullscreen();
+
+}
 
 
 /* =====================================================
-   KEYBOARD
+   BACK / ESCAPE
 ===================================================== */
 
 document.addEventListener(
     "keydown",
     event => {
 
-        /*
-           Escape closes viewer
-        */
-
         if (
-            event.key === "Escape" &&
-            !viewer.classList.contains(
-                "hidden"
-            )
+            event.key === "Escape"
         ) {
 
             closeImageViewer();
-
-        }
-
-
-        /*
-           R = reset zoom
-        */
-
-        if (
-            event.key.toLowerCase() === "r" &&
-            !viewer.classList.contains(
-                "hidden"
-            )
-        ) {
-
-            resetZoom();
 
         }
 
@@ -1910,7 +1677,139 @@ document.addEventListener(
 
 
 /* =====================================================
-   TABS
+   BROWSER FULLSCREEN CHANGE
+===================================================== */
+
+document.addEventListener(
+    "fullscreenchange",
+    () => {
+
+        /*
+         * If browser fullscreen was exited,
+         * close our viewer too.
+         */
+
+        if (
+            !document.fullscreenElement &&
+            !viewer.classList.contains(
+                "hidden"
+            )
+        ) {
+
+            viewer.classList.add(
+                "hidden"
+            );
+
+            viewer.setAttribute(
+                "aria-hidden",
+                "true"
+            );
+
+            const oldURL =
+                viewerImage.src;
+
+
+            viewerImage.removeAttribute(
+                "src"
+            );
+
+
+            viewerImage.classList.add(
+                "hidden"
+            );
+
+
+            resetZoom();
+
+
+            document.body.style.overflow =
+                "";
+
+
+            if (
+                oldURL &&
+                oldURL.startsWith("blob:")
+            ) {
+
+                setTimeout(
+                    () => {
+
+                        URL.revokeObjectURL(
+                            oldURL
+                        );
+
+                    },
+                    0
+                );
+
+            }
+
+        }
+
+    }
+);
+
+
+/* =====================================================
+   SEARCH - CHORDS
+===================================================== */
+
+chordSearch.addEventListener(
+    "input",
+    event => {
+
+        const text =
+            event.target.value
+                .toLowerCase()
+                .trim();
+
+
+        renderChords(
+            chords.filter(
+                file =>
+                    cleanName(
+                        file.name
+                    )
+                    .toLowerCase()
+                    .includes(text)
+            )
+        );
+
+    }
+);
+
+
+/* =====================================================
+   SEARCH - LYRICS
+===================================================== */
+
+lyricSearch.addEventListener(
+    "input",
+    event => {
+
+        const text =
+            event.target.value
+                .toLowerCase()
+                .trim();
+
+
+        renderLyrics(
+            lyrics.filter(
+                file =>
+                    cleanName(
+                        file.name
+                    )
+                    .toLowerCase()
+                    .includes(text)
+            )
+        );
+
+    }
+);
+
+
+/* =====================================================
+   CHORD TAB
 ===================================================== */
 
 chordsBtn.addEventListener(
@@ -1938,6 +1837,10 @@ chordsBtn.addEventListener(
 );
 
 
+/* =====================================================
+   LYRICS TAB
+===================================================== */
+
 lyricsBtn.addEventListener(
     "click",
     () => {
@@ -1964,65 +1867,7 @@ lyricsBtn.addEventListener(
 
 
 /* =====================================================
-   SEARCH
-===================================================== */
-
-chordSearch.addEventListener(
-    "input",
-    event => {
-
-        const text =
-            event.target.value
-                .toLowerCase()
-                .trim();
-
-
-        renderChords(
-
-            chords.filter(
-                file =>
-                    cleanName(
-                        file.name
-                    )
-                    .toLowerCase()
-                    .includes(text)
-            )
-
-        );
-
-    }
-);
-
-
-lyricSearch.addEventListener(
-    "input",
-    event => {
-
-        const text =
-            event.target.value
-                .toLowerCase()
-                .trim();
-
-
-        renderLyrics(
-
-            lyrics.filter(
-                file =>
-                    cleanName(
-                        file.name
-                    )
-                    .toLowerCase()
-                    .includes(text)
-            )
-
-        );
-
-    }
-);
-
-
-/* =====================================================
-   START APP
+   START
 ===================================================== */
 
 loadData();
