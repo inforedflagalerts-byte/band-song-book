@@ -4,7 +4,7 @@ const BRANCH = "main";
 
 const API = `https://api.github.com/repos/${USERNAME}/${REPO}/contents`;
 
-const LIST_CACHE_KEY = "bandSongBookData_v4";
+const LIST_CACHE_KEY = "bandSongBookData_v5";
 const IMAGE_CACHE = "song-book-images-v5";
 
 let chords = [];
@@ -30,6 +30,7 @@ const viewerStatus = document.getElementById("viewerStatus");
 const viewerLoading = document.getElementById("viewerLoading");
 const viewerError = document.getElementById("viewerError");
 const closeViewer = document.getElementById("closeViewer");
+const fullscreenViewer = document.getElementById("fullscreenViewer");
 const status = document.getElementById("status");
 
 /* =====================================================
@@ -657,7 +658,10 @@ async function openViewer(image, title) {
     }
 }
 
-function closeImageViewer() {
+async function closeImageViewer() {
+    if (document.fullscreenElement === viewer) {
+        try { await document.exitFullscreen(); } catch (error) { console.log("Exit fullscreen error:", error); }
+    }
     viewer.classList.add("hidden");
     viewer.setAttribute("aria-hidden", "true");
 
@@ -676,6 +680,36 @@ function closeImageViewer() {
 }
 
 if (closeViewer) closeViewer.addEventListener("click", closeImageViewer);
+
+async function toggleViewerFullscreen() {
+    try {
+        if (!document.fullscreenElement) {
+            if (viewer.requestFullscreen) {
+                await viewer.requestFullscreen();
+            }
+        } else {
+            await document.exitFullscreen();
+        }
+    } catch (error) {
+        console.log("Fullscreen error:", error);
+    }
+}
+
+function updateFullscreenButton() {
+    if (!fullscreenViewer) return;
+    const active = document.fullscreenElement === viewer;
+    fullscreenViewer.textContent = active ? "⛶" : "⛶";
+    fullscreenViewer.setAttribute("aria-label", active ? "Exit full screen" : "Full screen");
+    fullscreenViewer.title = active ? "Exit full screen" : "Full screen";
+}
+
+if (fullscreenViewer) fullscreenViewer.addEventListener("click", event => {
+    event.stopPropagation();
+    toggleViewerFullscreen();
+});
+
+document.addEventListener("fullscreenchange", updateFullscreenButton);
+updateFullscreenButton();
 
 viewer.addEventListener("click", event => {
     if (
